@@ -264,7 +264,7 @@ export default function BoardsPage() {
                 정말로 삭제하시겠습니까?
               </h2>
               <p className="text-sm text-[var(--pencil)] mb-6" style={{ fontFamily: "var(--font-body)" }}>
-                "{boardToDelete.name}" 보드를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+                &quot;{boardToDelete.name}&quot; 보드를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
               </p>
               <div className="flex gap-3">
                 <button
