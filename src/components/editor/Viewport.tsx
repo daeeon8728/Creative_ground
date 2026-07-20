@@ -22,22 +22,23 @@ import { Geometry, Base, Addition, Subtraction, Intersection } from '@react-thre
 
 function getPrimitiveGeometry(type: PrimitiveType) {
   switch (type) {
-    case 'box':       return <boxGeometry args={[1, 1, 1]} />;
-    case 'sphere':    return <sphereGeometry args={[0.5, 32, 32]} />;
-    case 'cylinder':  return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
-    case 'cone':      return <coneGeometry args={[0.5, 1, 32]} />;
-    case 'torus':     return <torusGeometry args={[0.4, 0.15, 16, 64]} />;
-    case 'plane':     return <planeGeometry args={[1, 1]} />;
-    case 'capsule':   return <capsuleGeometry args={[0.3, 0.6, 8, 16]} />;
-    default:          return <boxGeometry args={[1, 1, 1]} />;
+    case 'box':       return <boxGeometry args={[1, 1, 1, 16, 16, 16]} />;
+    case 'sphere':    return <sphereGeometry args={[0.5, 64, 64]} />;
+    case 'cylinder':  return <cylinderGeometry args={[0.5, 0.5, 1, 32, 16]} />;
+    case 'cone':      return <coneGeometry args={[0.5, 1, 32, 16]} />;
+    case 'torus':     return <torusGeometry args={[0.4, 0.15, 32, 64]} />;
+    case 'plane':     return <planeGeometry args={[1, 1, 64, 64]} />;
+    case 'capsule':   return <capsuleGeometry args={[0.3, 0.6, 16, 32]} />;
+    default:          return <boxGeometry args={[1, 1, 1, 16, 16, 16]} />;
   }
 }
 
 function PrimitiveMesh({ obj }: { obj: SceneObject }) {
-  const { selectedId, selectObject, updateObject, transformMode } = useEditor();
+  const { selectedId, selectObject, updateObject, transformMode, sculptMode, sculptBrushSize, sculptBrushStrength, sculptBrushType } = useEditor();
   const isSelected = selectedId === obj.id;
   const meshRef = useRef<THREE.Mesh>(null);
   const [mounted, setMounted] = useState(false);
+  const isSculptingDown = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -134,6 +135,62 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     );
   }
 
+  // Sculpting logic
+  const handlePointerDown = (e: any) => {
+    if (sculptMode && isSelected) {
+      e.stopPropagation();
+      isSculptingDown.current = true;
+    }
+  };
+
+  const handlePointerUp = () => {
+    isSculptingDown.current = false;
+  };
+
+  const handlePointerMove = (e: any) => {
+    if (!sculptMode || !isSelected || !isSculptingDown.current || !meshRef.current) return;
+    e.stopPropagation();
+    
+    // Check if we hit this object
+    if (e.intersections && e.intersections.length > 0) {
+      const hit = e.intersections[0];
+      if (hit.object !== meshRef.current) return;
+
+      const geometry = meshRef.current.geometry as THREE.BufferGeometry;
+      const positions = geometry.attributes.position;
+      const normals = geometry.attributes.normal;
+      if (!positions || !normals) return;
+
+      const hitPoint = meshRef.current.worldToLocal(hit.point.clone());
+      const v = new THREE.Vector3();
+      const n = new THREE.Vector3();
+
+      let modified = false;
+      for (let i = 0; i < positions.count; i++) {
+        v.fromBufferAttribute(positions, i);
+        const dist = v.distanceTo(hitPoint);
+        if (dist < sculptBrushSize) {
+          n.fromBufferAttribute(normals, i);
+          const falloff = 1 - (dist / sculptBrushSize);
+          const move = falloff * sculptBrushStrength;
+          
+          if (sculptBrushType === 'push') {
+            v.sub(n.multiplyScalar(move));
+          } else {
+            v.add(n.multiplyScalar(move));
+          }
+          positions.setXYZ(i, v.x, v.y, v.z);
+          modified = true;
+        }
+      }
+
+      if (modified) {
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+      }
+    }
+  };
+
   // Normal primitive rendering
   const meshNode = (
     <mesh
@@ -141,9 +198,15 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
       position={obj.position}
       rotation={obj.rotation}
       scale={obj.scale}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerOut={handlePointerUp}
+      onPointerMove={handlePointerMove}
       onClick={(e) => {
-        e.stopPropagation();
-        selectObject(obj.id);
+        if (!sculptMode) {
+          e.stopPropagation();
+          selectObject(obj.id);
+        }
       }}
       castShadow
       receiveShadow
@@ -290,6 +353,7 @@ function SceneContent() {
         dampingFactor={0.05}
         minDistance={1}
         maxDistance={100}
+        enabled={!useEditor().sculptMode}
       />
     </>
   );

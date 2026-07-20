@@ -18,7 +18,7 @@ const TRANSFORM_MODES: { mode: TransformMode; label: string; key: string }[] = [
 ];
 
 export default function EditorToolbar({ onSave, onExportGlb, onExportPng, onShare }: Props) {
-  const { scene, transformMode, setTransformMode, setAiPanelOpen, aiPanelOpen, saveStatus, updateSceneMeta } = useEditor();
+  const { scene, transformMode, setTransformMode, setAiPanelOpen, aiPanelOpen, saveStatus, updateSceneMeta, sculptMode, setSculptMode } = useEditor();
 
   return (
     <header className="editor-toolbar">
@@ -61,6 +61,13 @@ export default function EditorToolbar({ onSave, onExportGlb, onExportPng, onShar
           title="AI Scene Assistant"
         >
           ✨ AI
+        </button>
+        <button
+          className={`toolbar-btn ${sculptMode ? 'active' : ''}`}
+          onClick={() => setSculptMode(!sculptMode)}
+          title="Toggle Sculpt Mode (찰흙 빚기)"
+        >
+          🖐️ Sculpt
         </button>
         <button className="toolbar-btn" onClick={onSave} title="Save (Ctrl+S)">
           💾 Save

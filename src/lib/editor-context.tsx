@@ -38,6 +38,16 @@ interface EditorContextValue {
   setAiPanelOpen: (open: boolean) => void;
   saveStatus: 'saved' | 'unsaved' | 'saving';
   setSaveStatus: (s: 'saved' | 'unsaved' | 'saving') => void;
+
+  // Sculpting
+  sculptMode: boolean;
+  setSculptMode: (active: boolean) => void;
+  sculptBrushSize: number;
+  setSculptBrushSize: (size: number) => void;
+  sculptBrushStrength: number;
+  setSculptBrushStrength: (strength: number) => void;
+  sculptBrushType: 'push' | 'pull';
+  setSculptBrushType: (type: 'push' | 'pull') => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -62,6 +72,11 @@ export function EditorProvider({
   const [transformMode, setTransformMode] = useState<TransformMode>('translate');
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving'>('saved');
+
+  const [sculptMode, setSculptMode] = useState(false);
+  const [sculptBrushSize, setSculptBrushSize] = useState(0.5);
+  const [sculptBrushStrength, setSculptBrushStrength] = useState(0.1);
+  const [sculptBrushType, setSculptBrushType] = useState<'push'|'pull'>('push');
 
   const setScene = useCallback((s: SceneData) => {
     setSceneState(s);
@@ -197,6 +212,14 @@ export function EditorProvider({
     setAiPanelOpen,
     saveStatus,
     setSaveStatus,
+    sculptMode,
+    setSculptMode,
+    sculptBrushSize,
+    setSculptBrushSize,
+    sculptBrushStrength,
+    setSculptBrushStrength,
+    sculptBrushType,
+    setSculptBrushType,
   };
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
