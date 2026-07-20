@@ -16,9 +16,6 @@ import * as THREE from 'three';
 import { useEditor } from '@/lib/editor-context';
 import type { SceneObject, PrimitiveType } from '@/lib/scene-types';
 
-// ─── Individual Mesh ─────────────────────────────────────────────
-
-import { Geometry, Base, Addition, Subtraction, Intersection } from '@react-three/csg';
 
 function getPrimitiveGeometry(type: PrimitiveType) {
   switch (type) {
@@ -45,10 +42,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   }, []);
 
   const geometry = useMemo(() => {
-    if (obj.type !== 'csg') {
-      return getPrimitiveGeometry(obj.type as PrimitiveType);
-    }
-    return null; // CSG handled differently
+    return getPrimitiveGeometry(obj.type as PrimitiveType);
   }, [obj.type]);
 
   if (!obj.visible) return null;
@@ -103,37 +97,6 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     />
   ) : null;
 
-  // CSG rendering
-  if (obj.type === 'csg' && obj.csgBaseType) {
-    return (
-      <>
-        {transformNode}
-        <mesh
-          ref={meshRef}
-          position={obj.position}
-          rotation={obj.rotation}
-          scale={obj.scale}
-          onClick={(e) => { e.stopPropagation(); selectObject(obj.id); }}
-          castShadow
-          receiveShadow
-        >
-          <Geometry>
-            <Base>{getPrimitiveGeometry(obj.csgBaseType)}</Base>
-            {obj.csgOperations?.map((op, i) => {
-              const OpComponent = op.op === 'subtract' ? Subtraction : op.op === 'intersect' ? Intersection : Addition;
-              return (
-                <OpComponent key={i} position={op.position} rotation={op.rotation} scale={op.scale}>
-                  {getPrimitiveGeometry(op.type)}
-                </OpComponent>
-              );
-            })}
-          </Geometry>
-          <meshStandardMaterial {...materialProps} />
-          {obj.hasSparkles && <Sparkles count={50} scale={2} size={4} speed={0.4} color={obj.color} />}
-        </mesh>
-      </>
-    );
-  }
 
   // Sculpting logic
   const handlePointerDown = (e: any) => {

@@ -1,15 +1,6 @@
 // ─── Primitive & Object Types ────────────────────────────────────
 export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'capsule';
-export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx' | 'csg';
-
-export interface CsgOperation {
-  id: string;
-  type: PrimitiveType;
-  op: 'add' | 'subtract' | 'intersect';
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
-}
+export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx';
 
 export interface SceneObject {
   id: string;
@@ -28,9 +19,6 @@ export interface SceneObject {
   importUrl?: string;
   importData?: string;
   importFormat?: 'obj' | 'fbx';
-  // For CSG objects
-  csgBaseType?: PrimitiveType;
-  csgOperations?: CsgOperation[];
   // Advanced Features
   textureMap?: string; // base64 or URL
   animationType?: 'none' | 'spin' | 'float' | 'pulse';
@@ -141,14 +129,6 @@ export interface AiSceneObject {
   rotation: [number, number, number];
   scale: [number, number, number];
   color: string;
-  csgBaseType?: PrimitiveType;
-  csgOperations?: {
-    type: PrimitiveType;
-    op: 'add' | 'subtract' | 'intersect';
-    position: [number, number, number];
-    rotation: [number, number, number];
-    scale: [number, number, number];
-  }[];
 }
 
 export interface AiSceneResponse {

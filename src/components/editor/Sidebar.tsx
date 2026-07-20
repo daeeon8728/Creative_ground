@@ -7,7 +7,7 @@ import { useRef, useState } from 'react';
 const PRIMITIVES: PrimitiveType[] = ['box', 'sphere', 'cylinder', 'cone', 'torus', 'plane', 'capsule'];
 
 export default function Sidebar() {
-  const { addPrimitive, addImportedObject, environment, updateEnvironment, objects, selectedId, convertToCsg, addCsgOperation } = useEditor();
+  const { addPrimitive, addImportedObject, environment, updateEnvironment, objects, selectedId } = useEditor();
   const fileRef = useRef<HTMLInputElement>(null);
   const [envOpen, setEnvOpen] = useState(false);
 
@@ -65,44 +65,6 @@ export default function Sidebar() {
       />
 
       <div className="sidebar-divider" />
-
-      {/* CSG Builder */}
-      {selectedObj && (
-        <>
-          <p className="panel-label">CSG Builder (도형 깎기)</p>
-          {selectedObj.type !== 'csg' && !selectedObj.type.toString().startsWith('imported') ? (
-            <button
-              className="toolbar-btn accent"
-              style={{ width: '100%', marginBottom: '0.5rem', fontSize: '0.8rem' }}
-              onClick={() => convertToCsg(selectedObj.id)}
-            >
-              Convert to CSG (조각하기)
-            </button>
-          ) : selectedObj.type === 'csg' ? (
-            <div className="csg-panel">
-              <p className="env-sub-label">Subtract (빼기)</p>
-              <div className="primitives-grid" style={{ marginBottom: '0.5rem' }}>
-                {PRIMITIVES.map((t) => (
-                  <button key={t} className="primitive-btn" onClick={() => addCsgOperation(selectedObj.id, t, 'subtract')} title={`Subtract ${t}`}>
-                    {PRIMITIVE_ICONS[t] || '➖'}
-                  </button>
-                ))}
-              </div>
-              <p className="env-sub-label">Add (더하기)</p>
-              <div className="primitives-grid">
-                {PRIMITIVES.map((t) => (
-                  <button key={t} className="primitive-btn" onClick={() => addCsgOperation(selectedObj.id, t, 'add')} title={`Add ${t}`}>
-                    {PRIMITIVE_ICONS[t] || '➕'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="env-sub-label text-center">Not supported for imported objects</p>
-          )}
-          <div className="sidebar-divider" />
-        </>
-      )}
 
       {/* Environment */}
       <button className="panel-label env-toggle" onClick={() => setEnvOpen(!envOpen)}>
