@@ -27,15 +27,24 @@ export interface NemotronOptions {
 export function parseAiJson<T>(content: string): T {
   const trimmed = content.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const jsonText = fenced?.[1] ?? trimmed;
+  let jsonText = fenced?.[1] ?? trimmed;
+
+  // Repair common JSON errors from LLMs (e.g. missing commas between array elements)
+  jsonText = jsonText.replace(/\}\s*\{/g, '},{');
+  jsonText = jsonText.replace(/"\s*"/g, '","');
+
   const start = jsonText.indexOf('{');
   const end = jsonText.lastIndexOf('}');
 
-  if (start >= 0 && end > start) {
-    return JSON.parse(jsonText.slice(start, end + 1)) as T;
+  try {
+    if (start >= 0 && end > start) {
+      return JSON.parse(jsonText.slice(start, end + 1)) as T;
+    }
+    return JSON.parse(jsonText) as T;
+  } catch (e) {
+    console.error('JSON parsing error. Raw string:', jsonText, e);
+    throw new Error('AI가 올바르지 않은 데이터를 생성했습니다. 구체적인 형태로 다시 시도해주세요.');
   }
-
-  return JSON.parse(jsonText) as T;
 }
 
 // ── Call NVIDIA Cloud API (nemotron-3-super-120b-a12b) ───────────────────────

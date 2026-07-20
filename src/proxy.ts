@@ -5,12 +5,13 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Public routes — accessible without login
-  const publicPrefixes = ["/", "/gallery", "/api/auth", "/api/register"];
+  // Note: /gallery can be viewed by anyone, but posting requires login.
+  const publicPrefixes = ["/", "/api/auth", "/api/register"];
   const isPublic =
     publicPrefixes.some((r) => pathname === r || pathname.startsWith(r + "/")) ||
-    pathname === "/projects";
+    pathname.startsWith("/gallery");
 
-  // Protect editor and share routes — require login
+  // Protect editor and projects routes — require login
   if (!isPublic && !req.auth) {
     return NextResponse.redirect(new URL("/", req.url));
   }

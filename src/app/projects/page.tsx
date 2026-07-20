@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { nanoid } from 'nanoid';
 import { getAllScenes, deleteScene, saveScene, createEmptyScene } from '@/lib/scene-db';
 import type { SceneData } from '@/lib/scene-types';
@@ -44,12 +45,15 @@ export default function ProjectsPage() {
       <header className="projects-header">
         <div>
           <Link href="/" className="projects-logo">⬡ FORGE3D</Link>
-          <p className="projects-subtitle">Your local projects</p>
+          <p className="projects-subtitle text-[var(--pencil)] text-xs font-mono font-bold mt-1 uppercase">Your local projects</p>
         </div>
         <div className="projects-header-actions">
           <Link href="/gallery" className="toolbar-btn">🌐 Gallery</Link>
           <button className="toolbar-btn accent" onClick={handleNew}>
             + New Scene
+          </button>
+          <button className="toolbar-btn" onClick={() => signOut({ callbackUrl: '/' })}>
+            Logout
           </button>
         </div>
       </header>
@@ -65,8 +69,8 @@ export default function ProjectsPage() {
           <div className="projects-empty">
             <div className="projects-empty-icon">⬡</div>
             <h2>No projects yet</h2>
-            <p>Create your first 3D scene to get started.</p>
-            <button className="toolbar-btn accent large" onClick={handleNew}>
+            <p className="text-[var(--pencil)] font-mono">Create your first 3D scene to get started.</p>
+            <button className="toolbar-btn accent large mt-4" onClick={handleNew}>
               + Create New Scene
             </button>
           </div>
@@ -84,7 +88,7 @@ export default function ProjectsPage() {
                   <div className="project-card-preview">
                     <div className="project-card-3d-icon">
                       <span style={{ fontSize: '2rem' }}>⬡</span>
-                      <span className="project-obj-count">{scene.objects.length} objects</span>
+                      <span className="project-obj-count font-bold">{scene.objects.length} objects</span>
                     </div>
                   </div>
                   <div className="project-card-info">

@@ -36,7 +36,7 @@ export default function AuthPage() {
       if (result?.error) {
         setError("이메일/아이디 또는 비밀번호가 올바르지 않습니다.");
       } else {
-        router.push("/projects");
+        router.push("/boards");
       }
     });
   }
@@ -69,7 +69,7 @@ export default function AuthPage() {
       if (result?.error) {
         setError("회원가입은 완료됐으나 로그인에 실패했습니다. 다시 시도해주세요.");
       } else {
-        router.push("/projects");
+        router.push("/boards");
       }
     });
   }
@@ -92,13 +92,13 @@ export default function AuthPage() {
           className="font-display text-[5rem] leading-none tracking-tight uppercase text-[var(--ink)] select-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          Forge3D
+          Fragments
         </h1>
         <p
           className="mt-3 text-[var(--pencil)] text-sm tracking-wide"
           style={{ fontFamily: "var(--font-body)" }}
         >
-          브라우저 기반 3D 모델링 도구
+          콜라주 보드 × 기획 도구
         </p>
 
         {/* Decorative accent line */}
@@ -237,6 +237,14 @@ export default function AuthPage() {
         {/* Decorative offset block */}
         <div className="h-1 w-full bg-[var(--riso-yellow)] mt-0" />
       </motion.div>
+
+      {/* Footer tagline */}
+      <p
+        className="mt-10 text-xs text-[var(--pencil)] text-center"
+        style={{ fontFamily: "var(--font-mono)" }}
+      >
+        no ads · no tracking · your boards stay in your browser
+      </p>
     </main>
   );
 }

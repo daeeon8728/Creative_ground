@@ -97,7 +97,9 @@ function SceneBackground() {
   return (
     <>
       {/* Background color */}
-      <color attach="background" args={[scene?.background ?? '#1a1a2e']} />
+      {scene?.background ? (
+        <color attach="background" args={[scene.background]} />
+      ) : null}
 
       {/* Click on empty space to deselect */}
       <mesh
@@ -137,12 +139,12 @@ function SceneContent() {
         position={[0, 0, 0]}
         cellSize={1}
         cellThickness={0.5}
-        cellColor="#2a2a4a"
+        cellColor="#1c1a17"
         sectionSize={5}
         sectionThickness={1}
-        sectionColor="#3a3a6a"
+        sectionColor="#1c1a17"
         fadeDistance={30}
-        fadeStrength={1}
+        fadeStrength={1.5}
         followCamera={false}
         infiniteGrid
       />

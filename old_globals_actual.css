@@ -1,0 +1,132 @@
+/* ─── Google Fonts ─────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+/* ─── Risograph Design Tokens ──────────────────────────────── */
+:root {
+  /* Palette */
+  --paper:       #f5f0e8;
+  --paper-dim:   #ede8df;
+  --ink:         #1c1a17;
+  --riso-blue:   #1a5cff;
+  --riso-yellow: #ffd000;
+  --riso-coral:  #f24e1e;
+  --pencil:      #8a8278;
+  --surface:     #ffffff;
+  --surface-2:   #f0ebe2;
+
+  /* Typography */
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+
+  /* Hard offset shadow (the signature move) */
+  --shadow-riso-blue:   4px 4px 0px var(--riso-blue);
+  --shadow-riso-yellow: 4px 4px 0px var(--riso-yellow);
+  --shadow-riso-coral:  4px 4px 0px var(--riso-coral);
+  --shadow-ink:         4px 4px 0px var(--ink);
+  --shadow-sm-blue:     2px 2px 0px var(--riso-blue);
+  --shadow-sm-yellow:   2px 2px 0px var(--riso-yellow);
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px var(--riso-blue);
+}
+
+/* ─── Dark mode tokens ─────────────────────────────────────── */
+.dark {
+  --paper:       #1a1815;
+  --paper-dim:   #141210;
+  --ink:         #f0ebe2;
+  --riso-blue:   #4d7fff;
+  --riso-yellow: #ffd633;
+  --riso-coral:  #ff6b47;
+  --pencil:      #6b6560;
+  --surface:     #24211e;
+  --surface-2:   #2e2b27;
+}
+
+/* ─── Tailwind theme mapping ───────────────────────────────── */
+@theme inline {
+  --color-paper:        var(--paper);
+  --color-paper-dim:    var(--paper-dim);
+  --color-ink:          var(--ink);
+  --color-riso-blue:    var(--riso-blue);
+  --color-riso-yellow:  var(--riso-yellow);
+  --color-riso-coral:   var(--riso-coral);
+  --color-pencil:       var(--pencil);
+  --color-surface:      var(--surface);
+  --color-surface-2:    var(--surface-2);
+
+  --font-display: var(--font-display);
+  --font-body:    var(--font-body);
+  --font-mono:    var(--font-mono);
+}
+
+/* ─── Base reset ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ─── Paper grain texture ──────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  background-repeat: repeat;
+}
+
+/* ─── Hard offset shadow utilities ────────────────────────── */
+.shadow-riso-blue   { box-shadow: var(--shadow-riso-blue); }
+.shadow-riso-yellow { box-shadow: var(--shadow-riso-yellow); }
+.shadow-riso-coral  { box-shadow: var(--shadow-riso-coral); }
+.shadow-riso-ink    { box-shadow: var(--shadow-ink); }
+.shadow-riso-sm-blue   { box-shadow: var(--shadow-sm-blue); }
+.shadow-riso-sm-yellow { box-shadow: var(--shadow-sm-yellow); }
+
+/* ─── Typography utilities ─────────────────────────────────── */
+.font-display { font-family: var(--font-display); }
+.font-body    { font-family: var(--font-body); }
+.font-mono    { font-family: var(--font-mono); }
+
+/* ─── Focus states (visible, not default browser outline) ── */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--paper-dim); }
+::-webkit-scrollbar-thumb { background: var(--pencil); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink); }
+
+/* ─── Reduced motion ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
