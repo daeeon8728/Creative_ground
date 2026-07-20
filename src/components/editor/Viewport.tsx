@@ -79,7 +79,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     }
   });
 
-  const transformNode = isSelected && mounted && meshRef.current ? (
+  const transformNode = isSelected && mounted && meshRef.current && !sculptMode ? (
     <TransformControls
       object={meshRef.current}
       mode={transformMode}
@@ -150,6 +150,8 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
       if (modified) {
         positions.needsUpdate = true;
         geometry.computeVertexNormals();
+        geometry.computeBoundingSphere();
+        geometry.computeBoundingBox();
       }
     }
   };
