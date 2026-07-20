@@ -108,13 +108,13 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     if (sculptMode && isSelected) {
       e.stopPropagation();
       isSculptingDown.current = true;
-      (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
+      (e.target as any).setPointerCapture?.(e.pointerId); // In R3F, e.target has setPointerCapture
     }
   };
 
   const handlePointerUp = (e: any) => {
     isSculptingDown.current = false;
-    (e.target as HTMLElement)?.releasePointerCapture?.(e.pointerId);
+    (e.target as any).releasePointerCapture?.(e.pointerId);
   };
 
   const handlePointerMove = (e: any) => {
@@ -195,10 +195,8 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
         onPointerOut={handlePointerOut}
         onPointerMove={handlePointerMove}
         onClick={(e) => {
-          if (!sculptMode) {
-            e.stopPropagation();
-            selectObject(obj.id);
-          }
+          e.stopPropagation();
+          selectObject(obj.id);
         }}
         castShadow
         receiveShadow
