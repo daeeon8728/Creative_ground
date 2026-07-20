@@ -17,16 +17,16 @@ import { useEditor } from '@/lib/editor-context';
 import type { SceneObject, PrimitiveType } from '@/lib/scene-types';
 
 
-function getPrimitiveGeometry(type: PrimitiveType) {
+function getPrimitiveGeometry(type: PrimitiveType): THREE.BufferGeometry {
   switch (type) {
-    case 'box':       return <boxGeometry args={[1, 1, 1, 16, 16, 16]} />;
-    case 'sphere':    return <sphereGeometry args={[0.5, 64, 64]} />;
-    case 'cylinder':  return <cylinderGeometry args={[0.5, 0.5, 1, 32, 16]} />;
-    case 'cone':      return <coneGeometry args={[0.5, 1, 32, 16]} />;
-    case 'torus':     return <torusGeometry args={[0.4, 0.15, 32, 64]} />;
-    case 'plane':     return <planeGeometry args={[1, 1, 64, 64]} />;
-    case 'capsule':   return <capsuleGeometry args={[0.3, 0.6, 16, 32]} />;
-    default:          return <boxGeometry args={[1, 1, 1, 16, 16, 16]} />;
+    case 'box':       return new THREE.BoxGeometry(1, 1, 1, 16, 16, 16);
+    case 'sphere':    return new THREE.SphereGeometry(0.5, 64, 64);
+    case 'cylinder':  return new THREE.CylinderGeometry(0.5, 0.5, 1, 32, 16);
+    case 'cone':      return new THREE.ConeGeometry(0.5, 1, 32, 16);
+    case 'torus':     return new THREE.TorusGeometry(0.4, 0.15, 32, 64);
+    case 'plane':     return new THREE.PlaneGeometry(1, 1, 64, 64);
+    case 'capsule':   return new THREE.CapsuleGeometry(0.3, 0.6, 16, 32);
+    default:          return new THREE.BoxGeometry(1, 1, 1, 16, 16, 16);
   }
 }
 
@@ -36,14 +36,19 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [mounted, setMounted] = useState(false);
   const isSculptingDown = useRef(false);
+  
+  // Brush Cursor State
+  const brushCursorRef = useRef<THREE.Mesh>(null);
+
+  // Maintain an independent clone of the geometry so R3F doesn't reset it
+  const geometry = useMemo(() => {
+    return getPrimitiveGeometry(obj.type as PrimitiveType).clone();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [obj.type]); // Intentionally omitting ID so it doesn't reset on simple updates
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const geometry = useMemo(() => {
-    return getPrimitiveGeometry(obj.type as PrimitiveType);
-  }, [obj.type]);
 
   if (!obj.visible) return null;
 
@@ -103,23 +108,37 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     if (sculptMode && isSelected) {
       e.stopPropagation();
       isSculptingDown.current = true;
+      (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: any) => {
     isSculptingDown.current = false;
+    (e.target as HTMLElement)?.releasePointerCapture?.(e.pointerId);
   };
 
   const handlePointerMove = (e: any) => {
-    if (!sculptMode || !isSelected || !isSculptingDown.current || !meshRef.current) return;
-    e.stopPropagation();
+    if (!sculptMode || !isSelected || !meshRef.current) return;
     
-    // Check if we hit this object
+    // Always update cursor position if hovered
     if (e.intersections && e.intersections.length > 0) {
       const hit = e.intersections[0];
       if (hit.object !== meshRef.current) return;
+      e.stopPropagation();
 
-      const geometry = meshRef.current.geometry as THREE.BufferGeometry;
+      if (brushCursorRef.current) {
+        brushCursorRef.current.position.copy(hit.point);
+        if (hit.face) {
+          // Align ring to surface normal
+          const n = hit.face.normal.clone().transformDirection(meshRef.current.matrixWorld);
+          brushCursorRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+        }
+        brushCursorRef.current.visible = true;
+      }
+
+      // If not dragging, we just updated the cursor. Return.
+      if (!isSculptingDown.current) return;
+
       const positions = geometry.attributes.position;
       const normals = geometry.attributes.normal;
       if (!positions || !normals) return;
@@ -134,7 +153,8 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
         const dist = v.distanceTo(hitPoint);
         if (dist < sculptBrushSize) {
           n.fromBufferAttribute(normals, i);
-          const falloff = 1 - (dist / sculptBrushSize);
+          // Smoother falloff (cosine)
+          const falloff = Math.cos((dist / sculptBrushSize) * (Math.PI / 2));
           const move = falloff * sculptBrushStrength;
           
           if (sculptBrushType === 'push') {
@@ -156,30 +176,45 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     }
   };
 
+  const handlePointerOut = (e: any) => {
+    if (brushCursorRef.current) brushCursorRef.current.visible = false;
+    handlePointerUp(e);
+  };
+
   // Normal primitive rendering
   const meshNode = (
-    <mesh
-      ref={meshRef}
-      position={obj.position}
-      rotation={obj.rotation}
-      scale={obj.scale}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerOut={handlePointerUp}
-      onPointerMove={handlePointerMove}
-      onClick={(e) => {
-        if (!sculptMode) {
-          e.stopPropagation();
-          selectObject(obj.id);
-        }
-      }}
-      castShadow
-      receiveShadow
-    >
-      {geometry}
-      <meshStandardMaterial {...materialProps} />
-      {obj.hasSparkles && <Sparkles count={50} scale={2} size={4} speed={0.4} color={obj.color} />}
-    </mesh>
+    <>
+      <mesh
+        ref={meshRef}
+        geometry={geometry}
+        position={obj.position}
+        rotation={obj.rotation}
+        scale={obj.scale}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerOut={handlePointerOut}
+        onPointerMove={handlePointerMove}
+        onClick={(e) => {
+          if (!sculptMode) {
+            e.stopPropagation();
+            selectObject(obj.id);
+          }
+        }}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial {...materialProps} />
+        {obj.hasSparkles && <Sparkles count={50} scale={2} size={4} speed={0.4} color={obj.color} />}
+      </mesh>
+      
+      {/* Brush Cursor */}
+      {sculptMode && isSelected && (
+        <mesh ref={brushCursorRef} visible={false}>
+          <ringGeometry args={[sculptBrushSize * 0.9, sculptBrushSize, 32]} />
+          <meshBasicMaterial color="#ff4d4d" side={THREE.DoubleSide} depthTest={false} transparent opacity={0.8} />
+        </mesh>
+      )}
+    </>
   );
 
   return (

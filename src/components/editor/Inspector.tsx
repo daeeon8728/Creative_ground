@@ -177,37 +177,6 @@ export default function Inspector() {
 
       <div className="inspector-divider" />
 
-      {/* Sculpting */}
-      {sculptMode && (
-        <>
-          <p className="vec3-label" style={{ color: '#ff4d4d' }}>🖐️ Sculpting Brush</p>
-          <div className="inspector-field">
-            <p className="inspector-field-label">Type</p>
-            <select
-              className="text-input"
-              value={sculptBrushType}
-              onChange={(e) => setSculptBrushType(e.target.value as 'push' | 'pull')}
-            >
-              <option value="push">Push (밀어넣기)</option>
-              <option value="pull">Pull (당기기)</option>
-            </select>
-          </div>
-          <div className="inspector-field">
-            <p className="inspector-field-label">Size</p>
-            <input type="range" min={0.1} max={2} step={0.1} value={sculptBrushSize}
-              onChange={(e) => setSculptBrushSize(parseFloat(e.target.value))} className="range-input" />
-            <span className="range-value">{sculptBrushSize.toFixed(1)}</span>
-          </div>
-          <div className="inspector-field">
-            <p className="inspector-field-label">Strength</p>
-            <input type="range" min={0.01} max={0.5} step={0.01} value={sculptBrushStrength}
-              onChange={(e) => setSculptBrushStrength(parseFloat(e.target.value))} className="range-input" />
-            <span className="range-value">{sculptBrushStrength.toFixed(2)}</span>
-          </div>
-          <div className="inspector-divider" />
-        </>
-      )}
-
       {/* Physics & VFX */}
       <p className="vec3-label">Physics & VFX</p>
       <div className="inspector-field row">

@@ -73,7 +73,7 @@ export function EditorProvider({
 
   const [sculptMode, setSculptMode] = useState(false);
   const [sculptBrushSize, setSculptBrushSize] = useState(0.5);
-  const [sculptBrushStrength, setSculptBrushStrength] = useState(0.1);
+  const [sculptBrushStrength, setSculptBrushStrength] = useState(0.01);
   const [sculptBrushType, setSculptBrushType] = useState<'push'|'pull'>('push');
 
   const setScene = useCallback((s: SceneData) => {

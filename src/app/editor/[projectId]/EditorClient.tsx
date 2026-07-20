@@ -11,6 +11,7 @@ import Sidebar from '@/components/editor/Sidebar';
 import Hierarchy from '@/components/editor/Hierarchy';
 import Inspector from '@/components/editor/Inspector';
 import EditorToolbar from '@/components/editor/EditorToolbar';
+import SculptToolbar from '@/components/editor/SculptToolbar';
 import AiPanel from '@/components/editor/AiPanel';
 
 // Dynamic import: Three.js must be client-side only
@@ -152,6 +153,7 @@ function EditorInner({ projectId }: { projectId: string }) {
         onExportPng={handleExportPng}
         onShare={handleShare}
       />
+      <SculptToolbar />
 
       <div className="editor-main">
         <Sidebar />
