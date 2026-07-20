@@ -1,23 +1,11 @@
-export type AiModelId = 'nemotron-super' | 'llama-3-3-70b' | 'gemini-2-flash';
+export type AiModelId = 'nemotron-super';
 
-export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKeyEnv: string; provider: 'nvidia' | 'google' }> = {
+export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKeyEnv: string; provider: 'nvidia' }> = {
   'nemotron-super': {
     label: 'Nemotron 120B',
     model: 'nvidia/nemotron-3-super-120b-a12b',
     apiKeyEnv: 'NVIDIA_API_KEY',
     provider: 'nvidia',
-  },
-  'llama-3-3-70b': {
-    label: 'Llama 3.3 70B',
-    model: 'meta/llama-3.3-70b-instruct',
-    apiKeyEnv: 'NVIDIA_LLAMA_API_KEY',
-    provider: 'nvidia',
-  },
-  'gemini-2-flash': {
-    label: 'Gemini 2.0 Flash',
-    model: 'gemini-2.0-flash',
-    apiKeyEnv: 'GEMINI_API_KEY',
-    provider: 'google',
   },
 };
 

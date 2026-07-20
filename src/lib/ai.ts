@@ -38,8 +38,8 @@ export function parseAiJson<T>(content: string): T {
   return JSON.parse(jsonText) as T;
 }
 
-// ── Internal: Call NVIDIA or local NIM ───────────────────────────
-async function callNvidiaModel(prompt: string, options: NemotronOptions = {}): Promise<string> {
+// ── Call NVIDIA Cloud API (nemotron-3-super-120b-a12b) ───────────────────────
+export async function callNemotron(prompt: string, options: NemotronOptions = {}): Promise<string> {
   const modelId = isAiModelId(options.modelId) ? options.modelId : DEFAULT_AI_MODEL;
   const model = AI_MODELS[modelId];
 
@@ -49,7 +49,7 @@ async function callNvidiaModel(prompt: string, options: NemotronOptions = {}): P
 
   const apiKey = process.env.NIM_BASE_URL
     ? (process.env.NIM_API_KEY ?? 'unused')
-    : (process.env[model.apiKeyEnv] || process.env.NVIDIA_API_KEY);
+    : process.env.NVIDIA_API_KEY;
 
   if (!apiKey) throw new Error('NVIDIA_API_KEY is not set');
 
@@ -84,58 +84,3 @@ async function callNvidiaModel(prompt: string, options: NemotronOptions = {}): P
   const data = await response.json();
   return data.choices[0].message.content;
 }
-
-// ── Internal: Call Gemini via native REST API ────────────────────
-async function callGeminiModel(prompt: string, options: NemotronOptions = {}): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
-
-  const modelName = 'gemini-2.0-flash';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
-  const userText = options.systemPrompt
-    ? `${options.systemPrompt}\n\n${prompt || 'proceed'}`
-    : (prompt || 'proceed');
-
-  const requestBody: Record<string, unknown> = {
-    contents: [{ role: 'user', parts: [{ text: userText }] }],
-    generationConfig: {
-      temperature: options.temperature ?? 0.7,
-      maxOutputTokens: options.maxTokens ?? 1024,
-    },
-  };
-
-  if (options.jsonMode) {
-    (requestBody.generationConfig as Record<string, unknown>).responseMimeType = 'application/json';
-  }
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Gemini API ${response.status}: ${err}`);
-  }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned empty response');
-  return text;
-}
-
-// ── Public: Auto-fallback from NVIDIA → Gemini ──────────────────
-export async function callNemotron(prompt: string, options: NemotronOptions = {}): Promise<string> {
-  // 1. Try NVIDIA / local NIM
-  try {
-    return await callNvidiaModel(prompt, options);
-  } catch (e1) {
-    console.warn('[AI] NVIDIA failed, trying Gemini fallback:', (e1 as Error).message);
-  }
-
-  // 2. Fallback to Gemini
-  return callGeminiModel(prompt, options);
-}
-

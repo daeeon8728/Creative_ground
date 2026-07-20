@@ -4,19 +4,20 @@ import { NextResponse } from "next/server";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  // Public routes
-  const publicRoutes = ["/", "/api/register", "/api/auth"];
+  // Public routes — accessible without login
+  const publicPrefixes = ["/", "/gallery", "/api/auth", "/api/register"];
   const isPublic =
-    publicRoutes.some((r) => pathname === r || pathname.startsWith(r + "/")) ||
-    pathname.startsWith("/share/");
+    publicPrefixes.some((r) => pathname === r || pathname.startsWith(r + "/")) ||
+    pathname === "/projects";
 
+  // Protect editor and share routes — require login
   if (!isPublic && !req.auth) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Redirect logged-in users away from auth page
+  // Logged-in users visiting "/" go to /projects
   if (pathname === "/" && req.auth) {
-    return NextResponse.redirect(new URL("/boards", req.url));
+    return NextResponse.redirect(new URL("/projects", req.url));
   }
 
   return NextResponse.next();
