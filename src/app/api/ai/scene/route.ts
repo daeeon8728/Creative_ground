@@ -2,30 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callNemotron, parseAiJson } from '@/lib/ai';
 import type { AiSceneResponse } from '@/lib/scene-types';
 
-const SYSTEM_PROMPT = `You are a 3D scene design assistant. When given a description, respond ONLY with a valid JSON object.
+const SYSTEM_PROMPT = `You are an expert 3D scene design architect. When given a description, respond ONLY with a valid JSON object.
 The JSON must have an "objects" array and an optional "description" string.
 Each object in the array must have:
 - type: one of "box", "sphere", "cylinder", "cone", "torus", "plane", "capsule"
-- name: descriptive string
+- name: descriptive string (e.g. "Left Upper Arm")
 - position: [x, y, z] numbers (y is up, keep objects above y=0 unless it's a floor/plane)
 - rotation: [x, y, z] in radians
 - scale: [x, y, z] positive numbers
 - color: hex color string like "#4d7fff"
 
 Rules:
-- Create 3–10 objects maximum
-- Vary positions so objects don't overlap
-- Use realistic proportions
-- A "floor" should be a plane with scale [10, 10, 10] at position [0, 0, 0]
-- A "wall" should be a box with large x/z scale and small thickness
-- Keep scenes compact (positions roughly within -10 to 10 range)
+- You can create up to 30 objects to build complex structures.
+- When building living creatures, characters, or robots, think carefully about anatomy. Include all necessary parts: Head, Neck, Torso, Shoulders, Upper Arms, Lower Arms, Hands, Pelvis, Thighs, Calves, and Feet.
+- Pay extreme attention to CONNECTIVITY. Arms must attach to the top sides of the torso, legs to the bottom. Parts should not float in mid-air. Calculate relative positions logically.
+- Vary positions so objects don't completely overlap, but joint areas SHOULD intersect slightly to look connected.
+- A "floor" should be a plane with scale [20, 20, 1] at position [0, 0, 0].
+- Keep scenes relatively compact (positions roughly within -15 to 15 range), scaling parts proportionally.
 
 Example response:
 {
-  "description": "A simple room with a table and chair",
+  "description": "A humanoid figure standing",
   "objects": [
-    {"type": "plane", "name": "Floor", "position": [0, 0, 0], "rotation": [-1.5708, 0, 0], "scale": [10, 10, 1], "color": "#555555"},
-    {"type": "box", "name": "Table top", "position": [0, 1, 0], "rotation": [0, 0, 0], "scale": [2, 0.1, 1], "color": "#8B4513"}
+    {"type": "box", "name": "Torso", "position": [0, 3, 0], "rotation": [0, 0, 0], "scale": [1.5, 2, 1], "color": "#1E90FF"},
+    {"type": "sphere", "name": "Head", "position": [0, 4.5, 0], "rotation": [0, 0, 0], "scale": [0.8, 0.8, 0.8], "color": "#FFDBAC"},
+    {"type": "capsule", "name": "Left Arm", "position": [-1.2, 3, 0], "rotation": [0, 0, -0.2], "scale": [0.4, 1.5, 0.4], "color": "#1E90FF"}
   ]
 }`;
 
