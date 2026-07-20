@@ -31,11 +31,17 @@ export interface SceneObject {
   // For CSG objects
   csgBaseType?: PrimitiveType;
   csgOperations?: CsgOperation[];
+  // Advanced Features
+  textureMap?: string; // base64 or URL
+  animationType?: 'none' | 'spin' | 'float' | 'pulse';
+  isPhysicsBody?: boolean;
+  hasSparkles?: boolean;
 }
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
 
-// ─── Environment ─────────────────────────────────────────────────
+// ─── Scene & Environment Types ───────────────────────────────────
+
 export interface SceneEnvironment {
   background: string;   // hex color e.g. '#f5f0e8'
   fogEnabled: boolean;
@@ -46,18 +52,33 @@ export interface SceneEnvironment {
   gridColor: string;
   floorEnabled: boolean;
   floorColor: string;
+  // Advanced Environment
+  postProcessingEnabled: boolean;
+  bloomEnabled: boolean;
+  vignetteEnabled: boolean;
+  physicsEnabled: boolean;
+  ambientLightIntensity: number;
+  directionalLightIntensity: number;
+  spotLightEnabled: boolean;
 }
 
 export const DEFAULT_ENVIRONMENT: SceneEnvironment = {
-  background: '#f5f0e8',
+  background: '#e0e0e0', // Light grey paper-like
   fogEnabled: false,
-  fogColor: '#f5f0e8',
-  fogNear: 10,
-  fogFar: 60,
-  gridEnabled: true,
-  gridColor: '#1c1a17',
+  fogColor: '#e0e0e0',
+  fogNear: 1,
+  fogFar: 30,
   floorEnabled: false,
-  floorColor: '#ede8df',
+  floorColor: '#ffffff',
+  gridEnabled: true,
+  gridColor: '#000000',
+  postProcessingEnabled: false,
+  bloomEnabled: false,
+  vignetteEnabled: false,
+  physicsEnabled: false,
+  ambientLightIntensity: 0.5,
+  directionalLightIntensity: 1.2,
+  spotLightEnabled: false,
 };
 
 export const ENVIRONMENT_PRESETS: { label: string; icon: string; env: Partial<SceneEnvironment> }[] = [
@@ -166,6 +187,9 @@ export const DEFAULT_OBJECT_PROPS: Omit<SceneObject, 'id' | 'type' | 'name'> = {
   opacity: 1,
   metalness: 0.1,
   roughness: 0.7,
+  animationType: 'none',
+  isPhysicsBody: false,
+  hasSparkles: false,
 };
 
 // ─── Gallery helpers ─────────────────────────────────────────────

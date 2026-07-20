@@ -228,6 +228,63 @@ export default function Sidebar() {
               </div>
             </>
           )}
+
+          {/* Lighting Studio */}
+          <p className="env-sub-label">💡 Lighting Studio</p>
+          <div className="inspector-field row">
+            <span className="inspector-field-label">Spotlight</span>
+            <input type="checkbox" className="checkbox-input"
+              checked={environment.spotLightEnabled ?? false}
+              onChange={(e) => updateEnvironment({ spotLightEnabled: e.target.checked })} />
+          </div>
+          <div className="vec3-label" style={{ marginBottom: '0.25rem' }}>Ambient / Directional</div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <input type="range" min={0} max={3} step={0.05} className="range-input"
+              value={environment.ambientLightIntensity ?? 0.5}
+              onChange={(e) => updateEnvironment({ ambientLightIntensity: parseFloat(e.target.value) })} />
+            <input type="range" min={0} max={5} step={0.1} className="range-input"
+              value={environment.directionalLightIntensity ?? 1.2}
+              onChange={(e) => updateEnvironment({ directionalLightIntensity: parseFloat(e.target.value) })} />
+          </div>
+
+          {/* Post-Processing */}
+          <p className="env-sub-label">🎬 Post-Processing (VFX)</p>
+          <div className="inspector-field row">
+            <span className="inspector-field-label">Enable VFX</span>
+            <input type="checkbox" className="checkbox-input"
+              checked={environment.postProcessingEnabled ?? false}
+              onChange={(e) => updateEnvironment({ postProcessingEnabled: e.target.checked })} />
+          </div>
+          {environment.postProcessingEnabled && (
+            <>
+              <div className="inspector-field row">
+                <span className="inspector-field-label">✨ Bloom (Light Glow)</span>
+                <input type="checkbox" className="checkbox-input"
+                  checked={environment.bloomEnabled ?? false}
+                  onChange={(e) => updateEnvironment({ bloomEnabled: e.target.checked })} />
+              </div>
+              <div className="inspector-field row">
+                <span className="inspector-field-label">🎞 Vignette (Dark edges)</span>
+                <input type="checkbox" className="checkbox-input"
+                  checked={environment.vignetteEnabled ?? false}
+                  onChange={(e) => updateEnvironment({ vignetteEnabled: e.target.checked })} />
+              </div>
+            </>
+          )}
+
+          {/* Physics */}
+          <p className="env-sub-label">⚛️ Physics Engine</p>
+          <div className="inspector-field row">
+            <span className="inspector-field-label">Enable Gravity</span>
+            <input type="checkbox" className="checkbox-input"
+              checked={environment.physicsEnabled ?? false}
+              onChange={(e) => updateEnvironment({ physicsEnabled: e.target.checked })} />
+          </div>
+          {environment.physicsEnabled && (
+            <p className="env-sub-label" style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+              Select objects → Inspector → ⚛️ Physics Body to make them fall
+            </p>
+          )}
         </div>
       )}
     </aside>
