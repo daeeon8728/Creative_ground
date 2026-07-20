@@ -143,24 +143,36 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
       const normals = geometry.attributes.normal;
       if (!positions || !normals) return;
 
-      const hitPoint = meshRef.current.worldToLocal(hit.point.clone());
+      const hitNormal = hit.face?.normal.clone().transformDirection(meshRef.current.matrixWorld) || new THREE.Vector3(0, 0, 1);
+      
       const v = new THREE.Vector3();
       const n = new THREE.Vector3();
+      const worldV = new THREE.Vector3();
+      const worldN = new THREE.Vector3();
 
       let modified = false;
       for (let i = 0; i < positions.count; i++) {
         v.fromBufferAttribute(positions, i);
-        const dist = v.distanceTo(hitPoint);
+        worldV.copy(v).applyMatrix4(meshRef.current.matrixWorld);
+        
+        const dist = worldV.distanceTo(hit.point);
         if (dist < sculptBrushSize) {
           n.fromBufferAttribute(normals, i);
-          // Smoother falloff (cosine)
-          const falloff = Math.cos((dist / sculptBrushSize) * (Math.PI / 2));
-          const move = falloff * sculptBrushStrength;
+          worldN.copy(n).transformDirection(meshRef.current.matrixWorld);
+          
+          // Backface culling: don't pull vertices on the other side of the model
+          if (worldN.dot(hitNormal) < 0.1) continue;
+
+          // Quadratic falloff for smoother, tighter brush edges
+          const falloff = Math.pow(1 - (dist / sculptBrushSize), 2);
+          
+          // Convert world strength to local push amount (assuming uniform scale)
+          const moveLocal = (falloff * sculptBrushStrength) / meshRef.current.scale.x;
           
           if (sculptBrushType === 'push') {
-            v.sub(n.multiplyScalar(move));
+            v.sub(n.multiplyScalar(moveLocal));
           } else {
-            v.add(n.multiplyScalar(move));
+            v.add(n.multiplyScalar(moveLocal));
           }
           positions.setXYZ(i, v.x, v.y, v.z);
           modified = true;
