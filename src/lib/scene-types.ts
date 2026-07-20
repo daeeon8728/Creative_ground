@@ -1,6 +1,15 @@
 // ─── Primitive & Object Types ────────────────────────────────────
 export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'capsule';
-export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx';
+export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx' | 'csg';
+
+export interface CsgOperation {
+  id: string;
+  type: PrimitiveType;
+  op: 'add' | 'subtract' | 'intersect';
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+}
 
 export interface SceneObject {
   id: string;
@@ -19,6 +28,9 @@ export interface SceneObject {
   importUrl?: string;
   importData?: string;
   importFormat?: 'obj' | 'fbx';
+  // For CSG objects
+  csgBaseType?: PrimitiveType;
+  csgOperations?: CsgOperation[];
 }
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
@@ -102,12 +114,20 @@ export interface GalleryComment {
 
 // ─── AI Scene Response ───────────────────────────────────────────
 export interface AiSceneObject {
-  type: PrimitiveType;
+  type: ObjectType;
   name: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
   color: string;
+  csgBaseType?: PrimitiveType;
+  csgOperations?: {
+    type: PrimitiveType;
+    op: 'add' | 'subtract' | 'intersect';
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+  }[];
 }
 
 export interface AiSceneResponse {

@@ -15,6 +15,21 @@ import type { SceneObject, PrimitiveType } from '@/lib/scene-types';
 
 // ─── Individual Mesh ─────────────────────────────────────────────
 
+import { Geometry, Base, Addition, Subtraction, Intersection } from '@react-three/csg';
+
+function getPrimitiveGeometry(type: PrimitiveType) {
+  switch (type) {
+    case 'box':       return <boxGeometry args={[1, 1, 1]} />;
+    case 'sphere':    return <sphereGeometry args={[0.5, 32, 32]} />;
+    case 'cylinder':  return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
+    case 'cone':      return <coneGeometry args={[0.5, 1, 32]} />;
+    case 'torus':     return <torusGeometry args={[0.4, 0.15, 16, 64]} />;
+    case 'plane':     return <planeGeometry args={[1, 1]} />;
+    case 'capsule':   return <capsuleGeometry args={[0.3, 0.6, 8, 16]} />;
+    default:          return <boxGeometry args={[1, 1, 1]} />;
+  }
+}
+
 function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   const { selectedId, selectObject, updateObject, transformMode } = useEditor();
   const isSelected = selectedId === obj.id;
@@ -26,39 +41,78 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   }, []);
 
   const geometry = useMemo(() => {
-    switch (obj.type as PrimitiveType) {
-      case 'box':       return <boxGeometry args={[1, 1, 1]} />;
-      case 'sphere':    return <sphereGeometry args={[0.5, 32, 32]} />;
-      case 'cylinder':  return <cylinderGeometry args={[0.5, 0.5, 1, 32]} />;
-      case 'cone':      return <coneGeometry args={[0.5, 1, 32]} />;
-      case 'torus':     return <torusGeometry args={[0.4, 0.15, 16, 64]} />;
-      case 'plane':     return <planeGeometry args={[1, 1]} />;
-      case 'capsule':   return <capsuleGeometry args={[0.3, 0.6, 8, 16]} />;
-      default:          return <boxGeometry args={[1, 1, 1]} />;
+    if (obj.type !== 'csg') {
+      return getPrimitiveGeometry(obj.type as PrimitiveType);
     }
+    return null; // CSG handled differently
   }, [obj.type]);
 
   if (!obj.visible) return null;
 
+  const materialProps = {
+    color: obj.color,
+    wireframe: obj.wireframe,
+    transparent: obj.opacity < 1,
+    opacity: obj.opacity,
+    metalness: obj.metalness,
+    roughness: obj.roughness,
+    emissive: isSelected ? new THREE.Color(obj.color) : new THREE.Color(0x000000),
+    emissiveIntensity: isSelected ? 0.15 : 0,
+  };
+
+  const transformNode = isSelected && mounted && meshRef.current ? (
+    <TransformControls
+      object={meshRef.current}
+      mode={transformMode}
+      onObjectChange={() => {
+        if (!meshRef.current) return;
+        const p = meshRef.current.position;
+        const r = meshRef.current.rotation;
+        const s = meshRef.current.scale;
+        updateObject(obj.id, {
+          position: [p.x, p.y, p.z],
+          rotation: [r.x, r.y, r.z],
+          scale: [s.x, s.y, s.z],
+        });
+      }}
+    />
+  ) : null;
+
+  // CSG rendering
+  if (obj.type === 'csg' && obj.csgBaseType) {
+    return (
+      <>
+        {transformNode}
+        <mesh
+          ref={meshRef}
+          position={obj.position}
+          rotation={obj.rotation}
+          scale={obj.scale}
+          onClick={(e) => { e.stopPropagation(); selectObject(obj.id); }}
+          castShadow
+          receiveShadow
+        >
+          <Geometry>
+            <Base>{getPrimitiveGeometry(obj.csgBaseType)}</Base>
+            {obj.csgOperations?.map((op, i) => {
+              const OpComponent = op.op === 'subtract' ? Subtraction : op.op === 'intersect' ? Intersection : Addition;
+              return (
+                <OpComponent key={i} position={op.position} rotation={op.rotation} scale={op.scale}>
+                  {getPrimitiveGeometry(op.type)}
+                </OpComponent>
+              );
+            })}
+          </Geometry>
+          <meshStandardMaterial {...materialProps} />
+        </mesh>
+      </>
+    );
+  }
+
+  // Normal primitive rendering
   return (
     <>
-      {isSelected && mounted && meshRef.current && (
-        <TransformControls
-          object={meshRef.current}
-          mode={transformMode}
-          onObjectChange={() => {
-            if (!meshRef.current) return;
-            const p = meshRef.current.position;
-            const r = meshRef.current.rotation;
-            const s = meshRef.current.scale;
-            updateObject(obj.id, {
-              position: [p.x, p.y, p.z],
-              rotation: [r.x, r.y, r.z],
-              scale: [s.x, s.y, s.z],
-            });
-          }}
-        />
-      )}
+      {transformNode}
       <mesh
         ref={meshRef}
         position={obj.position}
@@ -72,16 +126,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
         receiveShadow
       >
         {geometry}
-        <meshStandardMaterial
-          color={obj.color}
-          wireframe={obj.wireframe}
-          transparent={obj.opacity < 1}
-          opacity={obj.opacity}
-          metalness={obj.metalness}
-          roughness={obj.roughness}
-          emissive={isSelected ? new THREE.Color(obj.color) : new THREE.Color(0x000000)}
-          emissiveIntensity={isSelected ? 0.15 : 0}
-        />
+        <meshStandardMaterial {...materialProps} />
       </mesh>
     </>
   );

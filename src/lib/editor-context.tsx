@@ -25,6 +25,8 @@ interface EditorContextValue {
   updateObject: (id: string, updates: Partial<SceneObject>) => void;
   deleteObject: (id: string) => void;
   duplicateObject: (id: string) => void;
+  convertToCsg: (id: string) => void;
+  addCsgOperation: (id: string, type: PrimitiveType, op: 'add'|'subtract'|'intersect') => void;
 
   // Scene operations
   updateSceneMeta: (updates: Partial<SceneData>) => void;
@@ -118,6 +120,34 @@ export function EditorProvider({
     setSelectedId(id);
   }, [mutateObjects]);
 
+  const convertToCsg = useCallback((id: string) => {
+    mutateObjects((prev) =>
+      prev.map((o) => {
+        if (o.id === id && o.type !== 'csg' && !o.type.toString().startsWith('imported')) {
+          return {
+            ...o,
+            type: 'csg',
+            csgBaseType: o.type as PrimitiveType,
+            csgOperations: [],
+          };
+        }
+        return o;
+      })
+    );
+  }, [mutateObjects]);
+
+  const addCsgOperation = useCallback((id: string, type: PrimitiveType, op: 'add'|'subtract'|'intersect') => {
+    mutateObjects((prev) =>
+      prev.map((o) => {
+        if (o.id === id && o.type === 'csg') {
+          const newOp = { id: nanoid(), type, op, position: [0, 0, 0] as [number,number,number], rotation: [0, 0, 0] as [number,number,number], scale: [1, 1, 1] as [number,number,number] };
+          return { ...o, csgOperations: [...(o.csgOperations || []), newOp] };
+        }
+        return o;
+      })
+    );
+  }, [mutateObjects]);
+
   const updateObject = useCallback((id: string, updates: Partial<SceneObject>) => {
     mutateObjects((prev) =>
       prev.map((o) => (o.id === id ? { ...o, ...updates } : o))
@@ -158,6 +188,8 @@ export function EditorProvider({
     updateObject,
     deleteObject,
     duplicateObject,
+    convertToCsg,
+    addCsgOperation,
     updateSceneMeta,
     updateEnvironment,
     environment: scene.environment ?? DEFAULT_ENVIRONMENT,
