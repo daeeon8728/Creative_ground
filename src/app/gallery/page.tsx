@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getGalleryPosts } from '@/lib/gallery';
+import { getPostScore } from '@/lib/scene-types';
 import type { GalleryPost } from '@/lib/scene-types';
 
 function timeAgo(ts: number) {
@@ -12,6 +13,12 @@ function timeAgo(ts: number) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function getTotalReactions(post: GalleryPost): number {
+  return (post.reactions ?? []).reduce((s, r) => s + r.userIds.length, 0) + (post.likes ?? []).length;
+}
+
+const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+
 export const revalidate = 60;
 
 export const metadata = {
@@ -22,10 +29,17 @@ export const metadata = {
 export default async function GalleryPage() {
   let posts: GalleryPost[] = [];
   try {
-    posts = await getGalleryPosts(24);
+    posts = await getGalleryPosts(50);
   } catch {
     // Redis might not be configured
   }
+
+  // Sort by score for ranking
+  const sorted = [...posts].sort((a, b) => getPostScore(b) - getPostScore(a));
+  const rankMap = new Map<string, number>();
+  sorted.forEach((p, i) => {
+    if (i < 3 && getPostScore(p) > 0) rankMap.set(p.id, i);
+  });
 
   return (
     <div className="gallery-page">
@@ -50,32 +64,77 @@ export default async function GalleryPage() {
             </Link>
           </div>
         ) : (
-          <div className="gallery-grid">
-            {posts.map((post) => (
-              <Link key={post.id} href={`/gallery/${post.id}`} className="gallery-card">
-                <div className="gallery-card-thumb">
-                  {post.thumbnail ? (
-                    <img src={post.thumbnail} alt={post.title} />
-                  ) : (
-                    <div className="gallery-card-placeholder">⬡</div>
-                  )}
+          <>
+            {/* Top 3 ranking section */}
+            {sorted.filter((p) => rankMap.has(p.id)).length > 0 && (
+              <section className="gallery-ranking">
+                <h2 className="gallery-ranking-title">🏆 Top Ranked</h2>
+                <div className="gallery-ranking-grid">
+                  {sorted.filter((p) => rankMap.has(p.id)).map((post) => {
+                    const rank = rankMap.get(post.id)!;
+                    return (
+                      <Link key={post.id} href={`/gallery/${post.id}`} className={`gallery-card ranking-card rank-${rank + 1}`}>
+                        <div className="ranking-medal">{RANK_MEDALS[rank]}</div>
+                        <div className="gallery-card-thumb">
+                          {post.thumbnail ? (
+                            <img src={post.thumbnail} alt={post.title} />
+                          ) : (
+                            <div className="gallery-card-placeholder">⬡</div>
+                          )}
+                        </div>
+                        <div className="gallery-card-info">
+                          <p className="gallery-card-title">{post.title}</p>
+                          <div className="gallery-card-meta">
+                            <span>@{post.username}</span>
+                            <span>·</span>
+                            <span>👁 {post.views ?? 0}</span>
+                            <span>·</span>
+                            <span>❤️ {getTotalReactions(post)}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
-                <div className="gallery-card-info">
-                  <p className="gallery-card-title">{post.title}</p>
-                  <div className="gallery-card-meta">
-                    <span>@{post.username}</span>
-                    <span>·</span>
-                    <span>{timeAgo(post.createdAt)}</span>
-                    <span>·</span>
-                    <span>❤️ {post.likes?.length ?? 0}</span>
-                  </div>
-                  {post.description && (
-                    <p className="gallery-card-desc">{post.description}</p>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+              </section>
+            )}
+
+            {/* All posts grid */}
+            <div className="gallery-grid">
+              {posts.map((post) => {
+                const rank = rankMap.get(post.id);
+                return (
+                  <Link key={post.id} href={`/gallery/${post.id}`} className="gallery-card">
+                    {rank !== undefined && (
+                      <span className="gallery-card-medal">{RANK_MEDALS[rank]}</span>
+                    )}
+                    <div className="gallery-card-thumb">
+                      {post.thumbnail ? (
+                        <img src={post.thumbnail} alt={post.title} />
+                      ) : (
+                        <div className="gallery-card-placeholder">⬡</div>
+                      )}
+                    </div>
+                    <div className="gallery-card-info">
+                      <p className="gallery-card-title">{post.title}</p>
+                      <div className="gallery-card-meta">
+                        <span>@{post.username}</span>
+                        <span>·</span>
+                        <span>{timeAgo(post.createdAt)}</span>
+                        <span>·</span>
+                        <span>👁 {post.views ?? 0}</span>
+                        <span>·</span>
+                        <span>❤️ {getTotalReactions(post)}</span>
+                      </div>
+                      {post.description && (
+                        <p className="gallery-card-desc">{post.description}</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
         )}
       </main>
     </div>

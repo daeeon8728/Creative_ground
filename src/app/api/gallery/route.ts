@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
       description: (description ?? '').trim(),
       thumbnail: thumbnail ?? '',
       likes: [],
+      reactions: [],
+      views: 0,
       createdAt: Date.now(),
       scene,
     };

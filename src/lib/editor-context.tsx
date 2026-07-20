@@ -2,8 +2,8 @@
 
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { nanoid } from 'nanoid';
-import type { SceneObject, TransformMode, PrimitiveType, SceneData } from './scene-types';
-import { DEFAULT_OBJECT_PROPS, PRIMITIVE_LABELS } from './scene-types';
+import type { SceneObject, TransformMode, PrimitiveType, SceneData, SceneEnvironment } from './scene-types';
+import { DEFAULT_OBJECT_PROPS, PRIMITIVE_LABELS, DEFAULT_ENVIRONMENT } from './scene-types';
 
 interface EditorContextValue {
   // Scene
@@ -28,6 +28,8 @@ interface EditorContextValue {
 
   // Scene operations
   updateSceneMeta: (updates: Partial<SceneData>) => void;
+  updateEnvironment: (updates: Partial<SceneEnvironment>) => void;
+  environment: SceneEnvironment;
 
   // Panels
   aiPanelOpen: boolean;
@@ -76,6 +78,14 @@ export function EditorProvider({
       // If objects are included in updates, merge them
       const merged = { ...prev, ...updates };
       return merged;
+    });
+    setSaveStatus('unsaved');
+  }, []);
+
+  const updateEnvironment = useCallback((updates: Partial<SceneEnvironment>) => {
+    setSceneState((prev) => {
+      const env = { ...(prev.environment ?? DEFAULT_ENVIRONMENT), ...updates };
+      return { ...prev, environment: env };
     });
     setSaveStatus('unsaved');
   }, []);
@@ -149,6 +159,8 @@ export function EditorProvider({
     deleteObject,
     duplicateObject,
     updateSceneMeta,
+    updateEnvironment,
+    environment: scene.environment ?? DEFAULT_ENVIRONMENT,
     aiPanelOpen,
     setAiPanelOpen,
     saveStatus,

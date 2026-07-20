@@ -16,12 +16,46 @@ export interface SceneObject {
   metalness: number;
   roughness: number;
   // For imported objects
-  importUrl?: string; // object URL (revoked on cleanup)
-  importData?: string; // base64-encoded file content
+  importUrl?: string;
+  importData?: string;
   importFormat?: 'obj' | 'fbx';
 }
 
 export type TransformMode = 'translate' | 'rotate' | 'scale';
+
+// ─── Environment ─────────────────────────────────────────────────
+export interface SceneEnvironment {
+  background: string;   // hex color e.g. '#f5f0e8'
+  fogEnabled: boolean;
+  fogColor: string;
+  fogNear: number;
+  fogFar: number;
+  gridEnabled: boolean;
+  gridColor: string;
+  floorEnabled: boolean;
+  floorColor: string;
+}
+
+export const DEFAULT_ENVIRONMENT: SceneEnvironment = {
+  background: '#f5f0e8',
+  fogEnabled: false,
+  fogColor: '#f5f0e8',
+  fogNear: 10,
+  fogFar: 60,
+  gridEnabled: true,
+  gridColor: '#1c1a17',
+  floorEnabled: false,
+  floorColor: '#ede8df',
+};
+
+export const ENVIRONMENT_PRESETS: { label: string; icon: string; env: Partial<SceneEnvironment> }[] = [
+  { label: 'Paper',   icon: '📄', env: { background: '#f5f0e8', gridColor: '#1c1a17', fogEnabled: false } },
+  { label: 'Sky',     icon: '☀️', env: { background: '#87CEEB', gridColor: '#1c1a17', fogEnabled: true, fogColor: '#87CEEB', fogNear: 20, fogFar: 80 } },
+  { label: 'Sunset',  icon: '🌅', env: { background: '#ff7e5f', gridColor: '#4a0e00', fogEnabled: true, fogColor: '#ff7e5f', fogNear: 15, fogFar: 60 } },
+  { label: 'Night',   icon: '🌙', env: { background: '#0d0d2b', gridColor: '#4d7fff', fogEnabled: true, fogColor: '#0d0d2b', fogNear: 10, fogFar: 50 } },
+  { label: 'Studio',  icon: '💡', env: { background: '#2a2a2a', gridColor: '#555555', fogEnabled: false } },
+  { label: 'Void',    icon: '⬛', env: { background: '#000000', gridColor: '#333333', fogEnabled: false } },
+];
 
 // ─── Scene / Project ─────────────────────────────────────────────
 export interface SceneData {
@@ -29,8 +63,15 @@ export interface SceneData {
   name: string;
   objects: SceneObject[];
   background: string;
+  environment?: SceneEnvironment;
   createdAt: number;
   updatedAt: number;
+}
+
+// ─── Gallery Reactions ───────────────────────────────────────────
+export interface GalleryReaction {
+  emoji: string;
+  userIds: string[];
 }
 
 // ─── Gallery ─────────────────────────────────────────────────────
@@ -40,10 +81,11 @@ export interface GalleryPost {
   username: string;
   title: string;
   description: string;
-  thumbnail: string; // base64 PNG
-  likes: string[];   // array of userIds
+  thumbnail: string;        // base64 PNG
+  likes: string[];          // legacy — kept for backward compat
+  reactions: GalleryReaction[];  // new emoji reactions
+  views: number;            // view counter
   createdAt: number;
-  // scene is stored separately to keep list fast
 }
 
 export interface GalleryPostFull extends GalleryPost {
@@ -105,3 +147,12 @@ export const DEFAULT_OBJECT_PROPS: Omit<SceneObject, 'id' | 'type' | 'name'> = {
   metalness: 0.1,
   roughness: 0.7,
 };
+
+// ─── Gallery helpers ─────────────────────────────────────────────
+/** Total reaction/like count for ranking */
+export function getPostScore(post: GalleryPost): number {
+  const reactionCount = (post.reactions ?? []).reduce((s, r) => s + r.userIds.length, 0);
+  const likeCount = (post.likes ?? []).length;
+  const viewCount = (post.views ?? 0) * 0.1; // views are worth less
+  return reactionCount + likeCount + viewCount;
+}

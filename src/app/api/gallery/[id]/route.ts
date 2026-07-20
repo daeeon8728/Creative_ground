@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getGalleryPost, deleteGalleryPost, toggleLike } from '@/lib/gallery';
+import { getGalleryPost, deleteGalleryPost, deleteGalleryPostAdmin, toggleLike, toggleReaction } from '@/lib/gallery';
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,12 +19,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
-    const { action } = await req.json();
+    const { action, emoji } = await req.json();
+    const userId = session.user.id ?? session.user.email ?? 'anon';
 
     if (action === 'like') {
-      const userId = session.user.id ?? session.user.email ?? 'anon';
       const likes = await toggleLike(id, userId);
       return NextResponse.json({ likes });
+    }
+
+    if (action === 'react' && emoji) {
+      const reactions = await toggleReaction(id, emoji, userId);
+      return NextResponse.json({ reactions });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
@@ -40,9 +45,16 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     const userId = session.user.id ?? session.user.email ?? 'anon';
-    const ok = await deleteGalleryPost(id, userId);
-    if (!ok) return NextResponse.json({ error: 'Forbidden or not found' }, { status: 403 });
+    const isAdmin = session.user.role === 'admin';
 
+    let ok: boolean;
+    if (isAdmin) {
+      ok = await deleteGalleryPostAdmin(id);
+    } else {
+      ok = await deleteGalleryPost(id, userId);
+    }
+
+    if (!ok) return NextResponse.json({ error: 'Forbidden or not found' }, { status: 403 });
     return NextResponse.json({ success: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

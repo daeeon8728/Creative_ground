@@ -15,12 +15,31 @@ interface StoredUser {
   username: string;
   passwordHash: string;
   role?: "admin" | "user";
+  createdAt?: number;
+  lastLogin?: number;
+  loginCount?: number;
 }
 
 function parseStoredUser(value: unknown): StoredUser | null {
   if (!value) return null;
   if (typeof value === "string") return JSON.parse(value) as StoredUser;
   return value as StoredUser;
+}
+
+async function recordLogin(user: StoredUser) {
+  const updated: StoredUser = {
+    ...user,
+    lastLogin: Date.now(),
+    loginCount: (user.loginCount ?? 0) + 1,
+  };
+  const emailKey    = `user:email:${user.email.toLowerCase().trim()}`;
+  const usernameKey = `user:username:${user.username.toLowerCase().trim()}`;
+  const idKey       = `user:id:${user.id}`;
+  await Promise.all([
+    redis.set(emailKey,    JSON.stringify(updated)),
+    redis.set(usernameKey, JSON.stringify(updated)),
+    redis.set(idKey,       JSON.stringify(updated)),
+  ]);
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -47,6 +66,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
+
+        // Record login stats asynchronously (don't await - don't block login)
+        recordLogin(user).catch(console.error);
 
         return { id: user.id, name: user.name, email: user.email, role: user.role ?? "user" };
       },

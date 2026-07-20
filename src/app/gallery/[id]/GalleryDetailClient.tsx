@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useSession } from 'next-auth/react';
-import type { GalleryPostFull, GalleryComment } from '@/lib/scene-types';
+import type { GalleryPostFull, GalleryComment, GalleryReaction } from '@/lib/scene-types';
 import { EditorProvider } from '@/lib/editor-context';
 
 const Viewport = dynamic(() => import('@/components/editor/Viewport'), {
@@ -22,6 +23,8 @@ function timeAgo(ts: number) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+const DEFAULT_EMOJIS = ['❤️', '😂', '😮', '🔥', '👏', '😢'];
+
 export default function GalleryDetailClient({
   post,
   comments: initialComments,
@@ -32,23 +35,57 @@ export default function GalleryDetailClient({
   postId: string;
 }) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [comments, setComments] = useState<GalleryComment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
-  const [likes, setLikes] = useState<string[]>(post.likes ?? []);
+  const [reactions, setReactions] = useState<GalleryReaction[]>(post.reactions ?? []);
+  const [views, setViews] = useState<number>(post.views ?? 0);
   const [viewMode, setViewMode] = useState<'thumb' | '3d'>('thumb');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [customEmoji, setCustomEmoji] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  const isLiked = session?.user?.id ? likes.includes(session.user.id) : false;
+  const userId = session?.user?.id ?? session?.user?.email ?? null;
+  const isOwner = userId && post.userId === userId;
+  const isAdmin = session?.user?.role === 'admin';
+  const canDelete = isOwner || isAdmin;
 
-  async function handleLike() {
-    if (!session) { alert('Please sign in to like.'); return; }
+  // Increment view count on mount
+  useEffect(() => {
+    fetch(`/api/gallery/${postId}/view`, { method: 'POST' }).catch(() => {});
+  }, [postId]);
+
+  async function handleReact(emoji: string) {
+    if (!session) { alert('로그인이 필요합니다.'); return; }
     const res = await fetch(`/api/gallery/${postId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'like' }),
+      body: JSON.stringify({ action: 'react', emoji }),
     });
     if (res.ok) {
       const data = await res.json();
-      setLikes(data.likes);
+      setReactions(data.reactions ?? []);
+    }
+    setShowEmojiPicker(false);
+  }
+
+  async function handleCustomEmoji(e: React.FormEvent) {
+    e.preventDefault();
+    const emoji = customEmoji.trim();
+    if (!emoji) return;
+    await handleReact(emoji);
+    setCustomEmoji('');
+  }
+
+  async function handleDelete() {
+    if (!confirm('이 게시물을 삭제하시겠습니까?')) return;
+    setDeleting(true);
+    const res = await fetch(`/api/gallery/${postId}`, { method: 'DELETE' });
+    if (res.ok) {
+      router.push('/gallery');
+    } else {
+      alert('삭제에 실패했습니다.');
+      setDeleting(false);
     }
   }
 
@@ -67,6 +104,12 @@ export default function GalleryDetailClient({
     }
   }
 
+  // Merge default emojis with any reactions that already exist
+  const allEmojis = Array.from(new Set([
+    ...DEFAULT_EMOJIS,
+    ...reactions.map((r) => r.emoji),
+  ]));
+
   return (
     <div className="gallery-detail-page">
       {/* Header */}
@@ -75,15 +118,21 @@ export default function GalleryDetailClient({
         <div className="gallery-detail-title-area">
           <h1 className="gallery-detail-title">{post.title}</h1>
           <p className="gallery-detail-meta">
-            by <strong>@{post.username}</strong> · {timeAgo(post.createdAt)}
+            by <strong>@{post.username}</strong> · {timeAgo(post.createdAt)} · 👁 {views} views
           </p>
         </div>
-        <button
-          className={`toolbar-btn${isLiked ? ' active' : ''}`}
-          onClick={handleLike}
-        >
-          {isLiked ? '❤️' : '🤍'} {likes.length}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {canDelete && (
+            <button
+              className="toolbar-btn"
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{ borderColor: 'var(--riso-coral)', color: 'var(--riso-coral)' }}
+            >
+              {deleting ? '삭제 중…' : '🗑 Delete'}
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="gallery-detail-body">
@@ -107,9 +156,9 @@ export default function GalleryDetailClient({
           {viewMode === 'thumb' ? (
             <div className="gallery-detail-thumb">
               {post.thumbnail ? (
-                <img src={post.thumbnail} alt={post.title} />
+                <img src={post.thumbnail} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <div className="gallery-card-placeholder large">⬡</div>
+                <div className="gallery-card-placeholder" style={{ fontSize: '6rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⬡</div>
               )}
             </div>
           ) : (
@@ -119,6 +168,56 @@ export default function GalleryDetailClient({
               </EditorProvider>
             </div>
           )}
+
+          {/* Emoji Reactions */}
+          <div className="reactions-bar">
+            <div className="reactions-list">
+              {allEmojis.map((emoji) => {
+                const r = reactions.find((x) => x.emoji === emoji);
+                const count = r?.userIds.length ?? 0;
+                const myReacted = userId ? (r?.userIds.includes(userId) ?? false) : false;
+                return (
+                  <button
+                    key={emoji}
+                    className={`reaction-btn${myReacted ? ' reacted' : ''}`}
+                    onClick={() => handleReact(emoji)}
+                    title={emoji}
+                  >
+                    <span>{emoji}</span>
+                    {count > 0 && <span className="reaction-count">{count}</span>}
+                  </button>
+                );
+              })}
+
+              {/* + Add custom emoji */}
+              <div className="reaction-picker-wrap">
+                <button
+                  className="reaction-btn add-reaction-btn"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  title="Add reaction"
+                >
+                  ➕
+                </button>
+                {showEmojiPicker && (
+                  <div className="reaction-picker">
+                    <p className="reaction-picker-label">원하는 이모지 입력</p>
+                    <form onSubmit={handleCustomEmoji} className="reaction-picker-form">
+                      <input
+                        type="text"
+                        value={customEmoji}
+                        onChange={(e) => setCustomEmoji(e.target.value)}
+                        placeholder="😊"
+                        className="reaction-picker-input"
+                        maxLength={4}
+                        autoFocus
+                      />
+                      <button type="submit" className="toolbar-btn accent" style={{ padding: '0.25rem 0.5rem' }}>+</button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {post.description && (
             <p className="gallery-detail-desc">{post.description}</p>
@@ -134,7 +233,7 @@ export default function GalleryDetailClient({
               <textarea
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Write a comment…"
+                placeholder="댓글을 입력하세요…"
                 className="ai-input"
                 rows={2}
               />
@@ -144,7 +243,7 @@ export default function GalleryDetailClient({
             </form>
           ) : (
             <p className="comment-sign-in">
-              <Link href="/api/auth/signin" className="text-accent">Sign in</Link> to leave a comment.
+              <Link href="/" className="text-accent">Sign in</Link> to leave a comment.
             </p>
           )}
 

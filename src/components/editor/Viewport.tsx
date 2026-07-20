@@ -8,7 +8,6 @@ import {
   TransformControls,
   GizmoHelper,
   GizmoViewport,
-  Environment,
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { useEditor } from '@/lib/editor-context';
@@ -88,28 +87,55 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   );
 }
 
-// ─── Scene click handler to deselect ─────────────────────────────
+// ─── Scene Environment ────────────────────────────────────────────
 
-function SceneBackground() {
-  const { selectObject, scene } = useEditor();
-  const { camera } = useThree();
+function SceneEnvironmentLayer() {
+  const { environment, selectObject } = useEditor();
 
   return (
     <>
       {/* Background color */}
-      {scene?.background ? (
-        <color attach="background" args={[scene.background]} />
-      ) : null}
+      <color attach="background" args={[environment.background]} />
 
-      {/* Click on empty space to deselect */}
-      <mesh
-        position={[0, 0, 0]}
-        visible={false}
-        onClick={() => selectObject(null)}
-      >
+      {/* Fog */}
+      {environment.fogEnabled && (
+        <fog
+          attach="fog"
+          args={[environment.fogColor, environment.fogNear, environment.fogFar]}
+        />
+      )}
+
+      {/* Click empty space to deselect */}
+      <mesh visible={false} onClick={() => selectObject(null)}>
         <sphereGeometry args={[100, 8, 8]} />
         <meshBasicMaterial side={THREE.BackSide} />
       </mesh>
+
+      {/* Optional flat floor plane */}
+      {environment.floorEnabled && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+          <planeGeometry args={[40, 40]} />
+          <meshStandardMaterial color={environment.floorColor} />
+        </mesh>
+      )}
+
+      {/* Grid */}
+      {environment.gridEnabled && (
+        <Grid
+          args={[20, 20]}
+          position={[0, 0, 0]}
+          cellSize={1}
+          cellThickness={0.5}
+          cellColor={environment.gridColor}
+          sectionSize={5}
+          sectionThickness={1}
+          sectionColor={environment.gridColor}
+          fadeDistance={30}
+          fadeStrength={1.5}
+          followCamera={false}
+          infiniteGrid
+        />
+      )}
     </>
   );
 }
@@ -121,10 +147,10 @@ function SceneContent() {
 
   return (
     <>
-      <SceneBackground />
+      <SceneEnvironmentLayer />
 
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.5} />
       <directionalLight
         position={[5, 8, 5]}
         intensity={1.2}
@@ -132,22 +158,6 @@ function SceneContent() {
         shadow-mapSize={[2048, 2048]}
       />
       <directionalLight position={[-5, 3, -5]} intensity={0.3} />
-
-      {/* Grid */}
-      <Grid
-        args={[20, 20]}
-        position={[0, 0, 0]}
-        cellSize={1}
-        cellThickness={0.5}
-        cellColor="#1c1a17"
-        sectionSize={5}
-        sectionThickness={1}
-        sectionColor="#1c1a17"
-        fadeDistance={30}
-        fadeStrength={1.5}
-        followCamera={false}
-        infiniteGrid
-      />
 
       {/* Objects */}
       {objects.map((obj) => (
@@ -157,7 +167,7 @@ function SceneContent() {
       {/* Camera gizmo */}
       <GizmoHelper alignment="bottom-right" margin={[70, 70]}>
         <GizmoViewport
-          axisColors={['#ff4d4d', '#4dff4d', '#4d7fff']}
+          axisColors={['#f24e1e', '#1a5cff', '#ffd000']}
           labelColor="white"
         />
       </GizmoHelper>
