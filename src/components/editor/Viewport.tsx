@@ -331,15 +331,13 @@ function PostProcessingLayer() {
 
 function CameraController() {
   const { camera, controls, scene: threeScene } = useThree();
-  const { selectedId, focusRequest } = useEditor();
+  const { focusRequest } = useEditor();
 
   useEffect(() => {
-    if (!selectedId && focusRequest.nonce === 0) return;
-    const target = selectedId ? threeScene.getObjectByProperty('uuid', '') : null;
-    void target;
+    if (!focusRequest.id || focusRequest.nonce === 0) return;
     const box = new THREE.Box3();
     threeScene.traverse((child) => {
-      if (child.userData.sceneObjectId === selectedId) box.expandByObject(child);
+      if (child.userData.sceneObjectId === focusRequest.id) box.expandByObject(child);
     });
     if (box.isEmpty()) return;
     const center = box.getCenter(new THREE.Vector3());
@@ -349,7 +347,7 @@ function CameraController() {
     const orbit = controls as { target?: THREE.Vector3; update?: () => void } | undefined;
     orbit?.target?.copy(center);
     orbit?.update?.();
-  }, [camera, controls, focusRequest.nonce, selectedId, threeScene]);
+  }, [camera, controls, focusRequest.id, focusRequest.nonce, threeScene]);
 
   return null;
 }
