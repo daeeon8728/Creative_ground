@@ -1,8 +1,11 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { useEditor } from '@/lib/editor-context';
-import type { SceneObject } from '@/lib/scene-types';
-import { useRef } from 'react';
+import type { SceneObject, ShadingMode } from '@/lib/scene-types';
+
+const RAD_TO_DEG = 180 / Math.PI;
+const DEG_TO_RAD = Math.PI / 180;
 
 function NumberInput({
   label,
@@ -18,13 +21,7 @@ function NumberInput({
   return (
     <label className="number-input-wrapper">
       <span className="axis-label">{label}</span>
-      <input
-        type="number"
-        step={step}
-        value={parseFloat(value.toFixed(3))}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        className="number-input"
-      />
+      <input type="number" step={step} value={Number(value.toFixed(3))} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} className="number-input" />
     </label>
   );
 }
@@ -52,60 +49,107 @@ function Vec3Control({
   );
 }
 
+function applyShading(mode: ShadingMode): Partial<SceneObject> {
+  if (mode === 'matte') return { shadingMode: mode, metalness: 0, roughness: 0.92, opacity: 1, wireframe: false };
+  if (mode === 'metal') return { shadingMode: mode, metalness: 0.85, roughness: 0.22, opacity: 1, wireframe: false };
+  if (mode === 'glass') return { shadingMode: mode, metalness: 0, roughness: 0.04, opacity: 0.36, wireframe: false };
+  if (mode === 'emissive') return { shadingMode: mode, metalness: 0, roughness: 0.35, opacity: 1, wireframe: false, hasSparkles: true };
+  return { shadingMode: mode, metalness: 0.1, roughness: 0.7, opacity: 1 };
+}
+
 export default function Inspector() {
-  const { objects, selectedId, updateObject, sculptMode, sculptBrushSize, setSculptBrushSize, sculptBrushStrength, setSculptBrushStrength, sculptBrushType, setSculptBrushType } = useEditor();
+  const {
+    objects,
+    selectedId,
+    updateObject,
+    alignSelected,
+    groundSelected,
+    frameSelected,
+    sculptMode,
+    sculptBrushSize,
+    setSculptBrushSize,
+    sculptBrushStrength,
+    setSculptBrushStrength,
+    sculptBrushType,
+    setSculptBrushType,
+  } = useEditor();
   const obj: SceneObject | undefined = objects.find((o) => o.id === selectedId);
   const textureRef = useRef<HTMLInputElement>(null);
+  const [uniformScale, setUniformScale] = useState(true);
 
   if (!obj) {
     return (
       <div className="inspector-panel">
         <p className="panel-label">Inspector</p>
-        <p className="inspector-empty">Select an object to edit its properties.</p>
+        <p className="inspector-empty">Select an object to edit transforms, materials, animation, and physics.</p>
       </div>
     );
   }
 
+  const selectedObj = obj;
   const update = (updates: Partial<SceneObject>) => updateObject(obj.id, updates);
+  const rotationDeg: [number, number, number] = selectedObj.rotation.map((v) => v * RAD_TO_DEG) as [number, number, number];
 
   function handleTextureUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      update({ textureMap: ev.target?.result as string });
-    };
+    reader.onload = (ev) => update({ textureMap: String(ev.target?.result ?? '') });
     reader.readAsDataURL(file);
     e.target.value = '';
+  }
+
+  function updateScale(next: [number, number, number]) {
+    if (!uniformScale) {
+      update({ scale: next });
+      return;
+    }
+    const changedIndex = next.findIndex((value, index) => value !== selectedObj.scale[index]);
+    const uniform = changedIndex >= 0 ? next[changedIndex] : next[0];
+    update({ scale: [uniform, uniform, uniform] });
   }
 
   return (
     <div className="inspector-panel">
       <p className="panel-label">Inspector</p>
 
-      {/* Name */}
       <div className="inspector-field">
         <p className="inspector-field-label">Name</p>
-        <input
-          type="text"
-          value={obj.name}
-          onChange={(e) => update({ name: e.target.value })}
-          className="text-input"
-        />
+        <input type="text" value={obj.name} onChange={(e) => update({ name: e.target.value })} className="text-input" disabled={obj.locked} />
+      </div>
+      <label className="inspector-field row">
+        <span className="inspector-field-label">Lock Object</span>
+        <input type="checkbox" checked={obj.locked ?? false} onChange={(e) => updateObject(obj.id, { locked: e.target.checked })} className="checkbox-input" />
+      </label>
+
+      <div className="inspector-divider" />
+      <Vec3Control label="Position" value={obj.position} onChange={(v) => update({ position: v })} />
+      <Vec3Control label="Rotation Degrees" value={rotationDeg} step={1} onChange={(v) => update({ rotation: v.map((n) => n * DEG_TO_RAD) as [number, number, number] })} />
+      <label className="inspector-field row">
+        <span className="inspector-field-label">Uniform Scale</span>
+        <input type="checkbox" checked={uniformScale} onChange={(e) => setUniformScale(e.target.checked)} className="checkbox-input" />
+      </label>
+      <Vec3Control label="Scale" value={obj.scale} step={0.05} onChange={updateScale} />
+      <div className="button-row">
+        <button className="mini-btn" onClick={() => update({ position: [0, obj.position[1], obj.position[2]] })}>Center X</button>
+        <button className="mini-btn" onClick={() => alignSelected('y')}>Center Y</button>
+        <button className="mini-btn" onClick={() => update({ position: [obj.position[0], obj.position[1], 0] })}>Center Z</button>
+      </div>
+      <div className="button-row">
+        <button className="mini-btn" onClick={groundSelected}>Ground</button>
+        <button className="mini-btn" onClick={frameSelected}>Frame</button>
+        <button className="mini-btn" onClick={() => update({ rotation: [0, 0, 0], scale: [1, 1, 1] })}>Reset</button>
       </div>
 
       <div className="inspector-divider" />
-
-      {/* Transform */}
-      <Vec3Control label="Position" value={obj.position} onChange={(v) => update({ position: v })} />
-      <Vec3Control label="Rotation (rad)" value={obj.rotation} step={0.05} onChange={(v) => update({ rotation: v })} />
-      <Vec3Control label="Scale" value={obj.scale} step={0.05} onChange={(v) => update({ scale: v })} />
-
-      <div className="inspector-divider" />
-
-      {/* Material */}
       <p className="vec3-label">Material</p>
-
+      <div className="segmented-row">
+        {(['solid', 'matte', 'metal', 'glass', 'emissive'] as ShadingMode[]).map((mode) => (
+          <button key={mode} className={`segment-btn${(obj.shadingMode ?? 'solid') === mode ? ' active' : ''}`} onClick={() => update(applyShading(mode))}>
+            {mode}
+          </button>
+        ))}
+      </div>
       <div className="inspector-field">
         <p className="inspector-field-label">Color</p>
         <div className="color-row">
@@ -113,82 +157,74 @@ export default function Inspector() {
           <span className="color-hex">{obj.color}</span>
         </div>
       </div>
-
-      <div className="inspector-field">
-        <p className="inspector-field-label">Opacity</p>
-        <input type="range" min={0} max={1} step={0.01} value={obj.opacity}
-          onChange={(e) => update({ opacity: parseFloat(e.target.value) })} className="range-input" />
-        <span className="range-value">{obj.opacity.toFixed(2)}</span>
-      </div>
-
-      <div className="inspector-field">
-        <p className="inspector-field-label">Metalness</p>
-        <input type="range" min={0} max={1} step={0.01} value={obj.metalness}
-          onChange={(e) => update({ metalness: parseFloat(e.target.value) })} className="range-input" />
-        <span className="range-value">{obj.metalness.toFixed(2)}</span>
-      </div>
-
-      <div className="inspector-field">
-        <p className="inspector-field-label">Roughness</p>
-        <input type="range" min={0} max={1} step={0.01} value={obj.roughness}
-          onChange={(e) => update({ roughness: parseFloat(e.target.value) })} className="range-input" />
-        <span className="range-value">{obj.roughness.toFixed(2)}</span>
-      </div>
-
-      <div className="inspector-field row">
-        <p className="inspector-field-label">Wireframe</p>
-        <input type="checkbox" checked={obj.wireframe}
-          onChange={(e) => update({ wireframe: e.target.checked })} className="checkbox-input" />
-      </div>
+      <label className="range-field">
+        <span>Opacity {obj.opacity.toFixed(2)}</span>
+        <input type="range" min={0} max={1} step={0.01} value={obj.opacity} onChange={(e) => update({ opacity: parseFloat(e.target.value) })} className="range-input" />
+      </label>
+      <label className="range-field">
+        <span>Metalness {obj.metalness.toFixed(2)}</span>
+        <input type="range" min={0} max={1} step={0.01} value={obj.metalness} onChange={(e) => update({ metalness: parseFloat(e.target.value) })} className="range-input" />
+      </label>
+      <label className="range-field">
+        <span>Roughness {obj.roughness.toFixed(2)}</span>
+        <input type="range" min={0} max={1} step={0.01} value={obj.roughness} onChange={(e) => update({ roughness: parseFloat(e.target.value) })} className="range-input" />
+      </label>
+      <label className="inspector-field row">
+        <span className="inspector-field-label">Wireframe</span>
+        <input type="checkbox" checked={obj.wireframe} onChange={(e) => update({ wireframe: e.target.checked })} className="checkbox-input" />
+      </label>
 
       <div className="inspector-divider" />
-
-      {/* Texture Map */}
-      <p className="vec3-label">Texture Map</p>
+      <p className="vec3-label">Texture</p>
       {obj.textureMap ? (
-        <div className="inspector-field row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="texture-row">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={obj.textureMap} alt="Texture" style={{ width: 48, height: 48, objectFit: 'cover', border: '2px solid #000', borderRadius: 4 }} />
-          <button className="toolbar-btn" style={{ fontSize: '0.75rem' }} onClick={() => update({ textureMap: undefined })}>🗑 Remove</button>
+          <img src={obj.textureMap} alt="Texture preview" />
+          <button className="mini-btn" onClick={() => update({ textureMap: undefined })}>Remove</button>
         </div>
       ) : (
-        <button className="import-btn" style={{ fontSize: '0.75rem', padding: '0.3rem 0.5rem' }} onClick={() => textureRef.current?.click()}>
-          📷 Upload Texture
-        </button>
+        <button className="import-btn compact-import" onClick={() => textureRef.current?.click()}>Upload Texture</button>
       )}
       <input ref={textureRef} type="file" accept="image/*" className="hidden" onChange={handleTextureUpload} />
 
       <div className="inspector-divider" />
-
-      {/* Animation */}
       <p className="vec3-label">Animation</p>
-      <div className="inspector-field">
-        <select
-          className="text-input"
-          value={obj.animationType ?? 'none'}
-          onChange={(e) => update({ animationType: e.target.value as SceneObject['animationType'] })}
-        >
-          <option value="none">None (Static)</option>
-          <option value="spin">🔄 Spin (Y-axis rotation)</option>
-          <option value="float">🪂 Float (Hover up/down)</option>
-          <option value="pulse">💗 Pulse (Scale in/out)</option>
-        </select>
-      </div>
+      <select className="text-input" value={obj.animationType ?? 'none'} onChange={(e) => update({ animationType: e.target.value as SceneObject['animationType'] })}>
+        <option value="none">None</option>
+        <option value="spin">Spin</option>
+        <option value="float">Float</option>
+        <option value="pulse">Pulse</option>
+      </select>
 
       <div className="inspector-divider" />
+      <p className="vec3-label">Physics and VFX</p>
+      <label className="inspector-field row">
+        <span className="inspector-field-label">Physics Body</span>
+        <input type="checkbox" checked={obj.isPhysicsBody ?? false} onChange={(e) => update({ isPhysicsBody: e.target.checked })} className="checkbox-input" />
+      </label>
+      <label className="inspector-field row">
+        <span className="inspector-field-label">Sparkles</span>
+        <input type="checkbox" checked={obj.hasSparkles ?? false} onChange={(e) => update({ hasSparkles: e.target.checked })} className="checkbox-input" />
+      </label>
 
-      {/* Physics & VFX */}
-      <p className="vec3-label">Physics & VFX</p>
-      <div className="inspector-field row">
-        <p className="inspector-field-label">⚛️ Physics Body (Gravity)</p>
-        <input type="checkbox" checked={obj.isPhysicsBody ?? false}
-          onChange={(e) => update({ isPhysicsBody: e.target.checked })} className="checkbox-input" />
-      </div>
-      <div className="inspector-field row">
-        <p className="inspector-field-label">✨ Sparkles Effect</p>
-        <input type="checkbox" checked={obj.hasSparkles ?? false}
-          onChange={(e) => update({ hasSparkles: e.target.checked })} className="checkbox-input" />
-      </div>
+      {sculptMode && (
+        <>
+          <div className="inspector-divider" />
+          <p className="vec3-label">Sculpt Brush</p>
+          <div className="segmented-row">
+            <button className={`segment-btn${sculptBrushType === 'push' ? ' active' : ''}`} onClick={() => setSculptBrushType('push')}>Push</button>
+            <button className={`segment-btn${sculptBrushType === 'pull' ? ' active' : ''}`} onClick={() => setSculptBrushType('pull')}>Pull</button>
+          </div>
+          <label className="range-field">
+            <span>Size {sculptBrushSize.toFixed(2)}</span>
+            <input type="range" min={0.05} max={1.5} step={0.01} value={sculptBrushSize} onChange={(e) => setSculptBrushSize(parseFloat(e.target.value))} className="range-input" />
+          </label>
+          <label className="range-field">
+            <span>Strength {sculptBrushStrength.toFixed(3)}</span>
+            <input type="range" min={0.001} max={0.05} step={0.001} value={sculptBrushStrength} onChange={(e) => setSculptBrushStrength(parseFloat(e.target.value))} className="range-input" />
+          </label>
+        </>
+      )}
     </div>
   );
 }
