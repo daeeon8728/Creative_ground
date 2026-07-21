@@ -11,6 +11,17 @@ import * as THREE from 'three';
 import { useEditor } from '@/lib/editor-context';
 import type { SceneObject, PrimitiveType } from '@/lib/scene-types';
 
+const DEFAULT_CAMERA_MOUSE = {
+  LEFT: THREE.MOUSE.ROTATE,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.PAN,
+};
+
+const SCULPT_CAMERA_MOUSE = {
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.ROTATE,
+};
+
 function getPrimitiveGeometry(type: PrimitiveType): THREE.BufferGeometry {
   switch (type) {
     case 'box': return new THREE.BoxGeometry(1, 1, 1, 16, 16, 16);
@@ -385,7 +396,14 @@ function SceneContent() {
       <GizmoHelper alignment="bottom-right" margin={[70, 70]}>
         <GizmoViewport axisColors={['#f24e1e', '#1a5cff', '#ffd000']} labelColor="white" />
       </GizmoHelper>
-      <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={1} maxDistance={100} enabled={!sculptMode} />
+      <OrbitControls
+        makeDefault
+        enableDamping
+        dampingFactor={0.05}
+        minDistance={1}
+        maxDistance={100}
+        mouseButtons={sculptMode ? SCULPT_CAMERA_MOUSE : DEFAULT_CAMERA_MOUSE}
+      />
     </>
   );
 }
