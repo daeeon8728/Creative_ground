@@ -9,13 +9,13 @@ export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKey
   },
   'gemini-flash': {
     label: 'Gemini 1.5 Flash',
-    model: 'gemini-1.5-flash',
+    model: 'gemini-1.5-flash-latest',
     apiKeyEnv: 'GEMINI_API_KEY',
     provider: 'google',
   },
   'gemini-flash-8b': {
     label: 'Gemini 1.5 Flash-8B',
-    model: 'gemini-1.5-flash-8b',
+    model: 'gemini-1.5-flash-8b-latest',
     apiKeyEnv: 'GEMINI_API_KEY',
     provider: 'google',
   },

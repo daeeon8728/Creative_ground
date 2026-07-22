@@ -66,7 +66,7 @@ async function callGemini(prompt: string, options: NemotronOptions, modelName: s
   };
   if (systemInstruction) body.systemInstruction = systemInstruction;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',
