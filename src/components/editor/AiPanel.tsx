@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { nanoid } from 'nanoid';
 import { useEditor } from '@/lib/editor-context';
 import { DEFAULT_OBJECT_PROPS } from '@/lib/scene-types';
+import { AI_MODELS, DEFAULT_AI_MODEL, type AiModelId } from '@/lib/ai-models';
 import type { AiSceneResponse, SceneObject } from '@/lib/scene-types';
 
 export default function AiPanel({ onClose }: { onClose: () => void }) {
@@ -12,6 +13,7 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AiModelId>(DEFAULT_AI_MODEL);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +28,7 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
+          modelId: selectedModel,
           existingObjects: (scene?.objects ?? []).map((o) => ({
             type: o.type,
             name: o.name,
@@ -72,9 +75,9 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
 
   const SUGGESTIONS = [
     'Create a futuristic space station corridor',
-    'Build a simple house with a roof',
+    'Build a detailed house with rooms',
     'Make an abstract geometric sculpture',
-    'Design a minimalist zen garden',
+    'Design a sci-fi robot character',
   ];
 
   return (
@@ -82,9 +85,23 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
       <div className="ai-panel-header">
         <div>
           <p className="ai-panel-title">✨ AI Scene Assistant</p>
-          <p className="ai-panel-subtitle">Powered by Nemotron 120B</p>
+          <p className="ai-panel-subtitle">Powered by {AI_MODELS[selectedModel].label}</p>
         </div>
         <button onClick={onClose} className="ai-panel-close" title="Close">✕</button>
+      </div>
+
+      {/* Model Selector */}
+      <div className="ai-model-selector">
+        {(Object.entries(AI_MODELS) as [AiModelId, typeof AI_MODELS[AiModelId]][]).map(([id, m]) => (
+          <button
+            key={id}
+            type="button"
+            className={`ai-model-btn ${selectedModel === id ? 'active' : ''}`}
+            onClick={() => setSelectedModel(id)}
+          >
+            {m.provider === 'google' ? '🔵' : '🟢'} {m.label}
+          </button>
+        ))}
       </div>
 
       <div className="ai-suggestions">
@@ -118,7 +135,7 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
               Generating…
             </span>
           ) : (
-            '✨ Generate Scene'
+            `✨ Generate with ${AI_MODELS[selectedModel].label}`
           )}
         </button>
       </form>

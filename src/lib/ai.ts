@@ -8,10 +8,10 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-// Create a new ratelimiter that allows 10 requests per 10 seconds per IP
+// Allow 60 requests per minute per IP (generous for personal use)
 export const aiRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(10, '10 s'),
+  limiter: Ratelimit.slidingWindow(60, '60 s'),
   analytics: true,
 });
 
@@ -47,11 +47,44 @@ export function parseAiJson<T>(content: string): T {
   }
 }
 
-// ── Call NVIDIA Cloud API (nemotron-3-super-120b-a12b) ───────────────────────
-export async function callNemotron(prompt: string, options: NemotronOptions = {}): Promise<string> {
-  const modelId = isAiModelId(options.modelId) ? options.modelId : DEFAULT_AI_MODEL;
-  const model = AI_MODELS[modelId];
+// ── Call Google Gemini API ────────────────────────────────────────────────────
+async function callGemini(prompt: string, options: NemotronOptions, modelName: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
+  const systemInstruction = options.systemPrompt
+    ? { parts: [{ text: options.systemPrompt }] }
+    : undefined;
+
+  const body: Record<string, unknown> = {
+    contents: [{ role: 'user', parts: [{ text: prompt || 'proceed' }] }],
+    generationConfig: {
+      temperature: options.temperature ?? 0.7,
+      maxOutputTokens: options.maxTokens ?? 4096,
+      ...(options.jsonMode ? { responseMimeType: 'application/json' } : {}),
+    },
+  };
+  if (systemInstruction) body.systemInstruction = systemInstruction;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+}
+
+// ── Call NVIDIA Cloud API (nemotron-3-super-120b-a12b) ───────────────────────
+async function callNvidia(prompt: string, options: NemotronOptions, modelName: string): Promise<string> {
   const baseUrl = process.env.NIM_BASE_URL
     ? `${process.env.NIM_BASE_URL}/v1`
     : 'https://integrate.api.nvidia.com/v1';
@@ -67,11 +100,11 @@ export async function callNemotron(prompt: string, options: NemotronOptions = {}
   messages.push({ role: 'user', content: prompt || 'proceed' });
 
   const body: Record<string, unknown> = {
-    model: model.model,
+    model: modelName,
     messages,
     temperature: options.temperature ?? 0.7,
     top_p: 0.95,
-    max_tokens: options.maxTokens ?? 1024,
+    max_tokens: options.maxTokens ?? 4096,
   };
 
   if (options.jsonMode) body.response_format = { type: 'json_object' };
@@ -92,4 +125,15 @@ export async function callNemotron(prompt: string, options: NemotronOptions = {}
 
   const data = await response.json();
   return data.choices[0].message.content;
+}
+
+// ── Main unified call function ────────────────────────────────────────────────
+export async function callNemotron(prompt: string, options: NemotronOptions = {}): Promise<string> {
+  const modelId = isAiModelId(options.modelId) ? options.modelId : DEFAULT_AI_MODEL;
+  const model = AI_MODELS[modelId];
+
+  if (model.provider === 'google') {
+    return callGemini(prompt, options, model.model);
+  }
+  return callNvidia(prompt, options, model.model);
 }

@@ -772,6 +772,23 @@ body::before {
 .ai-panel-close { background: none; border: 2px solid transparent; color: var(--ink); cursor: pointer; font-size: 1rem; font-weight: bold; padding: 0.25rem 0.5rem; }
 .ai-panel-close:hover { border-color: var(--ink); background: var(--riso-coral); color: var(--surface); }
 
+/* Model selector */
+.ai-model-selector { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.ai-model-btn {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ai-model-btn:hover { background: var(--riso-yellow); transform: translate(-1px,-1px); box-shadow: 2px 2px 0 var(--ink); }
+.ai-model-btn.active { background: var(--riso-blue); color: var(--surface); box-shadow: 2px 2px 0 var(--ink); }
+
 .ai-suggestions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .ai-suggestion-chip {
   padding: 0.3rem 0.75rem;
