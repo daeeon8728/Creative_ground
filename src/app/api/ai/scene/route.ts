@@ -42,13 +42,31 @@ export async function POST(req: NextRequest) {
       ? `Current scene has ${existingObjects.length} objects: ${JSON.stringify(existingObjects.slice(0, 10))}\n\nUser request: ${prompt}`
       : prompt;
 
-    const raw = await callNemotron(userMessage, {
-      systemPrompt: SYSTEM_PROMPT,
-      temperature: 0.7,
-      maxTokens: 8192,
-      jsonMode: true,
-      modelId: chosenModelId,
-    });
+    let raw: string;
+    try {
+      raw = await callNemotron(userMessage, {
+        systemPrompt: SYSTEM_PROMPT,
+        temperature: 0.7,
+        maxTokens: 8192,
+        jsonMode: true,
+        modelId: chosenModelId,
+      });
+    } catch (primaryErr) {
+      const msg = (primaryErr as Error).message ?? '';
+      // If Gemini quota exceeded, fallback to Nemotron
+      if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Quota exceeded')) {
+        console.warn('[AI Scene] Gemini quota exceeded, falling back to Nemotron');
+        raw = await callNemotron(userMessage, {
+          systemPrompt: SYSTEM_PROMPT,
+          temperature: 0.7,
+          maxTokens: 8192,
+          jsonMode: true,
+          modelId: 'nemotron-super',
+        });
+      } else {
+        throw primaryErr;
+      }
+    }
 
     const parsed = parseAiJson<AiSceneResponse>(raw);
     return NextResponse.json(parsed);

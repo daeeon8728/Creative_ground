@@ -1,4 +1,4 @@
-export type AiModelId = 'nemotron-super' | 'gemini-flash' | 'gemini-pro';
+export type AiModelId = 'nemotron-super' | 'gemini-flash' | 'gemini-flash-8b';
 
 export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKeyEnv: string; provider: 'nvidia' | 'google' }> = {
   'nemotron-super': {
@@ -8,14 +8,14 @@ export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKey
     provider: 'nvidia',
   },
   'gemini-flash': {
-    label: 'Gemini 2.0 Flash',
-    model: 'gemini-2.0-flash',
+    label: 'Gemini 1.5 Flash',
+    model: 'gemini-1.5-flash',
     apiKeyEnv: 'GEMINI_API_KEY',
     provider: 'google',
   },
-  'gemini-pro': {
-    label: 'Gemini 1.5 Pro',
-    model: 'gemini-1.5-pro',
+  'gemini-flash-8b': {
+    label: 'Gemini 1.5 Flash-8B',
+    model: 'gemini-1.5-flash-8b',
     apiKeyEnv: 'GEMINI_API_KEY',
     provider: 'google',
   },
