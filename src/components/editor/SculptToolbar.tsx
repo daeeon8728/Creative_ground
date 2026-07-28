@@ -22,6 +22,15 @@ export default function SculptToolbar() {
             <button className={`sculpt-toggle-btn ${sculptBrushType === 'pull' ? 'active' : ''}`} onClick={() => setSculptBrushType('pull')}>
               Pull
             </button>
+            <button className={`sculpt-toggle-btn ${sculptBrushType === 'smooth' ? 'active' : ''}`} onClick={() => setSculptBrushType('smooth')}>
+              Smooth
+            </button>
+            <button className={`sculpt-toggle-btn ${sculptBrushType === 'flatten' ? 'active' : ''}`} onClick={() => setSculptBrushType('flatten')}>
+              Flatten
+            </button>
+            <button className={`sculpt-toggle-btn ${sculptBrushType === 'pinch' ? 'active' : ''}`} onClick={() => setSculptBrushType('pinch')}>
+              Pinch
+            </button>
           </div>
         </div>
         <div className="sculpt-control-group">

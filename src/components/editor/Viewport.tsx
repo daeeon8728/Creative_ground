@@ -154,18 +154,55 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     const worldN = new THREE.Vector3();
     let modified = false;
 
+    let avgPosition = new THREE.Vector3();
+    let count = 0;
+    if (sculptBrushType === 'smooth') {
+      for (let i = 0; i < positions.count; i += 1) {
+        v.fromBufferAttribute(positions, i);
+        worldV.copy(v).applyMatrix4(meshRef.current.matrixWorld);
+        if (worldV.distanceTo(hit.point) < sculptBrushSize) {
+          avgPosition.add(worldV);
+          count++;
+        }
+      }
+      if (count > 0) avgPosition.divideScalar(count);
+    }
+
     for (let i = 0; i < positions.count; i += 1) {
       v.fromBufferAttribute(positions, i);
       worldV.copy(v).applyMatrix4(meshRef.current.matrixWorld);
       const dist = worldV.distanceTo(hit.point);
       if (dist >= sculptBrushSize) continue;
+      
       n.fromBufferAttribute(normals, i);
       worldN.copy(n).transformDirection(meshRef.current.matrixWorld);
-      if (worldN.dot(hitNormal) < 0.1) continue;
+      if (worldN.dot(hitNormal) < 0.1 && sculptBrushType !== 'pinch' && sculptBrushType !== 'smooth') continue;
+      
       const falloff = (1 - dist / sculptBrushSize) ** 2;
-      const moveLocal = (falloff * sculptBrushStrength) / Math.max(meshRef.current.scale.x, 0.001);
-      if (sculptBrushType === 'push') v.sub(n.multiplyScalar(moveLocal));
-      else v.add(n.multiplyScalar(moveLocal));
+      const strength = falloff * sculptBrushStrength;
+      
+      if (sculptBrushType === 'push') {
+        const moveLocal = strength / Math.max(meshRef.current.scale.x, 0.001);
+        v.sub(n.multiplyScalar(moveLocal));
+      } else if (sculptBrushType === 'pull') {
+        const moveLocal = strength / Math.max(meshRef.current.scale.x, 0.001);
+        v.add(n.multiplyScalar(moveLocal));
+      } else if (sculptBrushType === 'smooth' && count > 0) {
+        worldV.lerp(avgPosition, Math.min(strength * 5, 1));
+        meshRef.current.worldToLocal(worldV);
+        v.copy(worldV);
+      } else if (sculptBrushType === 'flatten') {
+        const distToPlane = hitNormal.dot(worldV.clone().sub(hit.point));
+        const targetWorldV = worldV.clone().sub(hitNormal.clone().multiplyScalar(distToPlane));
+        worldV.lerp(targetWorldV, Math.min(strength * 5, 1));
+        meshRef.current.worldToLocal(worldV);
+        v.copy(worldV);
+      } else if (sculptBrushType === 'pinch') {
+        worldV.lerp(hit.point, Math.min(strength * 5, 1));
+        meshRef.current.worldToLocal(worldV);
+        v.copy(worldV);
+      }
+      
       positions.setXYZ(i, v.x, v.y, v.z);
       modified = true;
     }

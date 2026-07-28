@@ -43,8 +43,8 @@ interface EditorContextValue {
   setSculptBrushSize: (size: number) => void;
   sculptBrushStrength: number;
   setSculptBrushStrength: (strength: number) => void;
-  sculptBrushType: 'push' | 'pull';
-  setSculptBrushType: (type: 'push' | 'pull') => void;
+  sculptBrushType: 'push' | 'pull' | 'smooth' | 'flatten' | 'pinch';
+  setSculptBrushType: (type: 'push' | 'pull' | 'smooth' | 'flatten' | 'pinch') => void;
 }
 
 type ModelPresetId = 'table' | 'chair' | 'lamp' | 'arch' | 'pedestal';
@@ -145,7 +145,7 @@ export function EditorProvider({
   const [sculptMode, setSculptMode] = useState(false);
   const [sculptBrushSize, setSculptBrushSize] = useState(0.5);
   const [sculptBrushStrength, setSculptBrushStrength] = useState(0.01);
-  const [sculptBrushType, setSculptBrushType] = useState<'push' | 'pull'>('push');
+  const [sculptBrushType, setSculptBrushType] = useState<'push' | 'pull' | 'smooth' | 'flatten' | 'pinch'>('push');
   const [focusRequest, setFocusRequest] = useState({ id: null as string | null, nonce: 0 });
   const [historyIndex, setHistoryIndex] = useState(0);
   const [history, setHistory] = useState<SceneData[]>(() => [withDefaults(initialScene)]);
