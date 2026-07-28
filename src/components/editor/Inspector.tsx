@@ -122,7 +122,7 @@ export default function Inspector() {
     newGeo.computeVertexNormals();
 
     const json = JSON.stringify(newGeo.toJSON());
-    updateObject(selectedId, { type: 'custom-mesh' as any, importData: json });
+    updateObject(selectedId, { type: 'custom-mesh', importData: json });
   }
   const obj: SceneObject | undefined = objects.find((o) => o.id === selectedId);
   const textureRef = useRef<HTMLInputElement>(null);
@@ -321,7 +321,7 @@ function CSGPanel({ obj }: { obj: SceneObject }) {
 
       // Store the merged geometry JSON as importData on the source object
       const json = JSON.stringify(result.geometry.toJSON());
-      updateObject(obj.id, { type: 'custom-mesh' as any, importData: json });
+      updateObject(obj.id, { type: 'custom-mesh', importData: json });
       deleteObject(targetId);
       setTargetId('');
       setStatus('Done! Boolean result applied.');

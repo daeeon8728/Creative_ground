@@ -144,8 +144,17 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     // Save modifications to scene state so they persist
     if (hasModifications.current && sculptMode && isSelected) {
       hasModifications.current = false;
-      const json = JSON.stringify(geometry.toJSON());
-      updateObject(obj.id, { type: 'custom-mesh' as any, importData: json });
+      
+      // Force it to be a raw BufferGeometry so that modified vertices are serialized
+      // instead of primitive parameters (e.g., BoxGeometry parameters)
+      const rawGeo = new THREE.BufferGeometry();
+      rawGeo.setAttribute('position', geometry.getAttribute('position'));
+      rawGeo.setAttribute('normal', geometry.getAttribute('normal'));
+      if (geometry.getIndex()) rawGeo.setIndex(geometry.getIndex());
+      if (geometry.getAttribute('uv')) rawGeo.setAttribute('uv', geometry.getAttribute('uv'));
+      
+      const json = JSON.stringify(rawGeo.toJSON());
+      updateObject(obj.id, { type: 'custom-mesh', importData: json });
     }
   };
 

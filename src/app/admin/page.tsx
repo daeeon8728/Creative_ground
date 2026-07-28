@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { getAllUsers } from '@/lib/gallery';
+import { getAllUsers, getGalleryPosts } from '@/lib/gallery';
 import type { StoredUserPublic } from '@/lib/gallery';
 
 export const metadata = { title: 'Forge3D — Admin Dashboard' };
@@ -19,9 +19,17 @@ export default async function AdminPage() {
   if (session.user.role !== 'admin') notFound();
 
   let users: StoredUserPublic[] = [];
+  const projectCounts: Record<string, number> = {};
+
   try {
     users = await getAllUsers();
     users.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    
+    // Fetch all posts to count projects per user
+    const posts = await getGalleryPosts(1000);
+    posts.forEach((p) => {
+      projectCounts[p.username] = (projectCounts[p.username] || 0) + 1;
+    });
   } catch {
     // Redis might not be configured in dev
   }
@@ -48,6 +56,7 @@ export default async function AdminPage() {
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Projects</th>
                 <th>Joined</th>
                 <th>Last Login</th>
                 <th>Login Count</th>
@@ -64,6 +73,7 @@ export default async function AdminPage() {
                       {u.role ?? 'user'}
                     </span>
                   </td>
+                  <td className="text-center font-bold text-accent">{projectCounts[u.username] ?? 0}</td>
                   <td className="font-mono text-xs">{formatDate(u.createdAt)}</td>
                   <td className="font-mono text-xs">{formatDate(u.lastLogin)}</td>
                   <td className="text-center font-bold">{u.loginCount ?? 0}</td>
@@ -71,7 +81,7 @@ export default async function AdminPage() {
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="admin-empty">No users found.</td>
+                  <td colSpan={8} className="admin-empty">No users found.</td>
                 </tr>
               )}
             </tbody>
