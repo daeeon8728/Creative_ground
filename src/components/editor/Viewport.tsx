@@ -90,12 +90,13 @@ function TransformHandle({ object, obj }: { object: THREE.Object3D | null; obj: 
 }
 
 function PrimitiveMesh({ obj }: { obj: SceneObject }) {
-  const { selectedId, selectObject, sculptMode, sculptBrushSize, sculptBrushStrength, sculptBrushType, registerMesh } = useEditor();
+  const { selectedId, selectObject, sculptMode, sculptBrushSize, sculptBrushStrength, sculptBrushType, registerMesh, updateObject } = useEditor();
   const isSelected = selectedId === obj.id;
   const meshRef = useRef<THREE.Mesh>(null);
   const [meshObject, setMeshObject] = useState<THREE.Mesh | null>(null);
   const brushCursorRef = useRef<THREE.Mesh>(null);
   const isSculptingDown = useRef(false);
+  const hasModifications = useRef(false);
   const geometry = useMemo(() => {
     let geo: THREE.BufferGeometry;
     if (obj.type === 'custom-mesh' && obj.importData) {
@@ -139,6 +140,13 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   const handlePointerUp = (e: { target: EventTarget; pointerId: number }) => {
     isSculptingDown.current = false;
     (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+    
+    // Save modifications to scene state so they persist
+    if (hasModifications.current && sculptMode && isSelected) {
+      hasModifications.current = false;
+      const json = JSON.stringify(geometry.toJSON());
+      updateObject(obj.id, { type: 'custom-mesh' as any, importData: json });
+    }
   };
 
   const handlePointerMove = (e: {
@@ -252,6 +260,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     }
 
     if (modified) {
+      hasModifications.current = true;
       // eslint-disable-next-line react-hooks/immutability
       positions.needsUpdate = true;
       geometry.computeVertexNormals();
