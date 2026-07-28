@@ -2,20 +2,9 @@ import Link from 'next/link';
 import { getGalleryPosts } from '@/lib/gallery';
 import { getPostScore } from '@/lib/scene-types';
 import type { GalleryPost } from '@/lib/scene-types';
+import GalleryCard from '@/components/gallery/GalleryCard';
 
-function timeAgo(ts: number) {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
 
-function getTotalReactions(post: GalleryPost): number {
-  return (post.reactions ?? []).reduce((s, r) => s + r.userIds.length, 0) + (post.likes ?? []).length;
-}
 
 const RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -72,66 +61,17 @@ export default async function GalleryPage() {
                 <div className="gallery-ranking-grid">
                   {sorted.filter((p) => rankMap.has(p.id)).map((post) => {
                     const rank = rankMap.get(post.id)!;
-                    return (
-                      <Link key={post.id} href={`/gallery/${post.id}`} className={`gallery-card ranking-card rank-${rank + 1}`}>
-                        <div className="ranking-medal">{RANK_MEDALS[rank]}</div>
-                        <div className="gallery-card-thumb">
-                          {post.thumbnail ? (
-                            <img src={post.thumbnail} alt={post.title} />
-                          ) : (
-                            <div className="gallery-card-placeholder">⬡</div>
-                          )}
-                        </div>
-                        <div className="gallery-card-info">
-                          <p className="gallery-card-title">{post.title}</p>
-                          <div className="gallery-card-meta">
-                            <span>@{post.username}</span>
-                            <span>·</span>
-                            <span>👁 {post.views ?? 0}</span>
-                            <span>·</span>
-                            <span>❤️ {getTotalReactions(post)}</span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
+                    return <GalleryCard key={post.id} post={post} rank={rank} rankMedal={RANK_MEDALS[rank]} />;
                   })}
                 </div>
               </section>
             )}
 
-            {/* All posts grid */}
-            <div className="gallery-grid">
+            {/* All posts grid - Masonry */}
+            <div className="gallery-masonry-grid">
               {posts.map((post) => {
                 const rank = rankMap.get(post.id);
-                return (
-                  <Link key={post.id} href={`/gallery/${post.id}`} className="gallery-card">
-                    {rank !== undefined && (
-                      <span className="gallery-card-medal">{RANK_MEDALS[rank]}</span>
-                    )}
-                    <div className="gallery-card-thumb">
-                      {post.thumbnail ? (
-                        <img src={post.thumbnail} alt={post.title} />
-                      ) : (
-                        <div className="gallery-card-placeholder">⬡</div>
-                      )}
-                    </div>
-                    <div className="gallery-card-info">
-                      <p className="gallery-card-title">{post.title}</p>
-                      <div className="gallery-card-meta">
-                        <span>@{post.username}</span>
-                        <span>·</span>
-                        <span>{timeAgo(post.createdAt)}</span>
-                        <span>·</span>
-                        <span>👁 {post.views ?? 0}</span>
-                        <span>·</span>
-                        <span>❤️ {getTotalReactions(post)}</span>
-                      </div>
-                      {post.description && (
-                        <p className="gallery-card-desc">{post.description}</p>
-                      )}
-                    </div>
-                  </Link>
-                );
+                return <GalleryCard key={post.id} post={post} rankMedal={rank !== undefined ? RANK_MEDALS[rank] : undefined} />;
               })}
             </div>
           </>

@@ -42,6 +42,16 @@ async function recordLogin(user: StoredUser) {
   ]);
 }
 
+export type PublicUser = Omit<StoredUser, 'passwordHash' | 'email'>;
+
+export async function getUserByUsername(username: string): Promise<PublicUser | null> {
+  const userValue = await redis.get(`user:username:${username.toLowerCase().trim()}`);
+  const user = parseStoredUser(userValue);
+  if (!user) return null;
+  const { passwordHash, email, ...publicUser } = user;
+  return publicUser;
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({

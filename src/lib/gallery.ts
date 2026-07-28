@@ -15,6 +15,13 @@ export async function getGalleryPosts(limit = 20, offset = 0): Promise<GalleryPo
   return posts.filter(Boolean) as GalleryPost[];
 }
 
+export async function getUserPosts(username: string): Promise<GalleryPost[]> {
+  const ids = await redis.zrange('gallery:index', 0, -1, { rev: true });
+  if (!ids.length) return [];
+  const posts = await Promise.all(ids.map((id) => redis.get<GalleryPost>(`gallery:post:${id}`)));
+  return (posts.filter(Boolean) as GalleryPost[]).filter((p) => p.username === username);
+}
+
 export async function getGalleryPost(id: string): Promise<GalleryPostFull | null> {
   const [post, scene] = await Promise.all([
     redis.get<GalleryPost>(`gallery:post:${id}`),

@@ -880,6 +880,86 @@ body::before {
   gap: 1.5rem;
 }
 
+.gallery-masonry-grid {
+  column-count: 3;
+  column-gap: 1.5rem;
+}
+@media (max-width: 1024px) {
+  .gallery-masonry-grid { column-count: 2; }
+}
+@media (max-width: 600px) {
+  .gallery-masonry-grid { column-count: 1; }
+}
+
+.gallery-card-wrapper {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  box-shadow: var(--shadow-ink);
+  transition: all 0.2s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.gallery-card-wrapper:hover {
+  transform: translateY(-4px);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+
+.gallery-card-link {
+  text-decoration: none;
+  display: block;
+}
+
+.gallery-card-thumb-container {
+  width: 100%;
+  aspect-ratio: 16/9; /* Can be adjusted or removed for true masonry if images have different aspect ratios, but we keep 16/9 for thumbnails right now */
+  background: var(--paper-dim);
+  border-bottom: 2px solid var(--ink);
+  position: relative;
+  overflow: hidden;
+}
+
+.gallery-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-card-3d {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0; left: 0;
+  background: var(--paper);
+}
+
+.mini-viewer-loading {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.gallery-card-title-link {
+  text-decoration: none;
+}
+.gallery-card-user {
+  text-decoration: none;
+  color: var(--accent);
+}
+.gallery-card-user:hover {
+  text-decoration: underline;
+}
+
 .gallery-card {
   background: var(--surface);
   border: 2px solid var(--ink);
@@ -905,6 +985,54 @@ body::before {
 .gallery-card-title { font-weight: 800; font-family: var(--font-display); font-size: 1.25rem; text-transform: uppercase; color: var(--ink); margin-bottom: 0.25rem; }
 .gallery-card-meta { display: flex; gap: 0.5rem; font-size: 0.75rem; font-weight: bold; color: var(--pencil); font-family: var(--font-mono); margin-bottom: 0.75rem; }
 .gallery-card-desc { font-size: 0.85rem; color: var(--ink); font-weight: 500; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* Profile Page */
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 2rem 0;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+.profile-username {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 0.2rem;
+}
+.profile-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--pencil);
+  margin-bottom: 1.5rem;
+}
+.profile-stats {
+  display: flex;
+  gap: 2rem;
+}
+.stat-box {
+  display: flex;
+  flex-direction: column;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--ink);
+}
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: var(--pencil);
+  text-transform: uppercase;
+}
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+}
 
 /* Gallery detail */
 .gallery-detail-page {
