@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { getComments, addComment } from '@/lib/gallery';
+import { getComments, addComment, getGalleryPost } from '@/lib/gallery';
+import { createNotification } from '@/lib/notifications';
 import { nanoid } from 'nanoid';
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +32,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     };
 
     await addComment(id, comment);
+
+    // Notify post author
+    const post = await getGalleryPost(id);
+    if (post && post.username) {
+      await createNotification(
+        post.username,
+        'comment',
+        comment.username,
+        `/gallery/${id}`
+      );
+    }
+
     return NextResponse.json(comment);
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });

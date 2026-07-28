@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getUserByUsername } from '@/lib/auth';
+import { getUserByUsername, auth } from '@/lib/auth';
 import { getUserPosts } from '@/lib/gallery';
+import { getFollowStats } from '@/lib/social';
 import GalleryCard from '@/components/gallery/GalleryCard';
+import FollowButton from '@/components/profile/FollowButton';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 export const revalidate = 60; // ISR
 
@@ -18,6 +22,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   }
 
   const posts = await getUserPosts(user.username);
+  const { followers, following } = await getFollowStats(user.username);
+  const session = await auth();
+  const isSelf = session?.user?.username === user.username;
   
   // Sort posts by date (newest first)
   const sortedPosts = [...posts].sort((a, b) => b.createdAt - a.createdAt);
@@ -31,13 +38,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <div className="gallery-header-left">
           <Link href="/gallery" className="projects-logo">⬡ FORGE3D</Link>
         </div>
-        <div className="button-row" style={{ margin: 0 }}>
-          <Link href="/projects" className="toolbar-btn">
-            My Projects
-          </Link>
-          <Link href="/gallery" className="toolbar-btn accent">
-            Gallery
-          </Link>
+        <div className="button-row" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <NotificationBell />
+          <ThemeToggle />
+          <Link href="/projects" className="toolbar-btn">My Projects</Link>
+          <Link href="/gallery" className="toolbar-btn">Gallery</Link>
         </div>
       </header>
 
@@ -52,6 +57,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                 <span className="stat-label">Scenes</span>
               </div>
               <div className="stat-box">
+                <span className="stat-value">{followers}</span>
+                <span className="stat-label">Followers</span>
+              </div>
+              <div className="stat-box">
+                <span className="stat-value">{following}</span>
+                <span className="stat-label">Following</span>
+              </div>
+              <div className="stat-box">
                 <span className="stat-value">{totalLikes}</span>
                 <span className="stat-label">Likes</span>
               </div>
@@ -62,12 +75,18 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </div>
           </div>
           <div className="profile-actions">
-            <button className="toolbar-btn accent large" disabled>
-              Follow (coming soon)
-            </button>
-            <button className="toolbar-btn large" disabled>
-              Message (coming soon)
-            </button>
+            {isSelf ? (
+              <Link href="/projects" className="toolbar-btn accent large">
+                ✏️ My Projects
+              </Link>
+            ) : (
+              <>
+                <FollowButton targetUsername={user.username} />
+                <Link href={`/chat/${user.username}`} className="toolbar-btn large">
+                  💬 Message
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

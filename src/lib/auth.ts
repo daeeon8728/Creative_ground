@@ -80,7 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Record login stats asynchronously (don't await - don't block login)
         recordLogin(user).catch(console.error);
 
-        return { id: user.id, name: user.name, email: user.email, role: user.role ?? "user" };
+        return { id: user.id, name: user.name, email: user.email, username: user.username, role: user.role ?? "user" };
       },
     }),
   ],
@@ -90,14 +90,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
-      if (user) token.role = user.role;
+      if (user) {
+        token.id = user.id;
+        token.role = user.role ?? "user";
+        token.username = user.username;
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = String(token.id);
-        session.user.role = token.role === "admin" ? "admin" : "user";
+        session.user.role = token.role as "admin" | "user";
+        session.user.username = token.username as string;
       }
       return session;
     },

@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { getGalleryPosts } from '@/lib/gallery';
 import { getPostScore } from '@/lib/scene-types';
 import type { GalleryPost } from '@/lib/scene-types';
+import { auth } from '@/lib/auth';
 import GalleryCard from '@/components/gallery/GalleryCard';
-
-
+import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 const RANK_MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -16,6 +17,7 @@ export const metadata = {
 };
 
 export default async function GalleryPage() {
+  const session = await auth();
   let posts: GalleryPost[] = [];
   try {
     posts = await getGalleryPosts(50);
@@ -37,9 +39,17 @@ export default async function GalleryPage() {
           <Link href="/" className="projects-logo">⬡ FORGE3D</Link>
           <h1 className="gallery-title">Community Gallery</h1>
         </div>
-        <Link href="/projects" className="toolbar-btn accent">
-          My Projects →
-        </Link>
+        <div className="button-row" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <NotificationBell />
+          <ThemeToggle />
+          <Link href="/projects" className="toolbar-btn">My Projects</Link>
+          {session?.user && (
+            <Link href={`/profile/${session.user.username}`} className="toolbar-btn">My Profile</Link>
+          )}
+          <Link href="/projects" className="toolbar-btn accent">
+            Create a Scene →
+          </Link>
+        </div>
       </header>
 
       <main className="gallery-main">
