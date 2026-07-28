@@ -1,5 +1,5 @@
 export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'capsule';
-export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx';
+export type ObjectType = PrimitiveType | 'imported-obj' | 'imported-fbx' | 'custom-mesh';
 export type ShadingMode = 'solid' | 'matte' | 'metal' | 'glass' | 'emissive';
 
 export interface SceneObject {

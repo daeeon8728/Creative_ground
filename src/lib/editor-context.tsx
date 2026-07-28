@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { nanoid } from 'nanoid';
+import type * as THREE from 'three';
 import type { SceneObject, TransformMode, PrimitiveType, SceneData, SceneEnvironment } from './scene-types';
 import { DEFAULT_OBJECT_PROPS, PRIMITIVE_LABELS, DEFAULT_ENVIRONMENT } from './scene-types';
 
@@ -45,6 +46,8 @@ interface EditorContextValue {
   setSculptBrushStrength: (strength: number) => void;
   sculptBrushType: 'push' | 'pull' | 'smooth' | 'flatten' | 'pinch';
   setSculptBrushType: (type: 'push' | 'pull' | 'smooth' | 'flatten' | 'pinch') => void;
+  meshes: Record<string, THREE.Mesh>;
+  registerMesh: (id: string, mesh: THREE.Mesh | null) => void;
 }
 
 type ModelPresetId = 'table' | 'chair' | 'lamp' | 'arch' | 'pedestal';
@@ -149,6 +152,16 @@ export function EditorProvider({
   const [focusRequest, setFocusRequest] = useState({ id: null as string | null, nonce: 0 });
   const [historyIndex, setHistoryIndex] = useState(0);
   const [history, setHistory] = useState<SceneData[]>(() => [withDefaults(initialScene)]);
+  const [meshes, setMeshes] = useState<Record<string, THREE.Mesh>>({});
+
+  const registerMesh = useCallback((id: string, mesh: THREE.Mesh | null) => {
+    setMeshes((prev) => {
+      const next = { ...prev };
+      if (mesh) next[id] = mesh;
+      else delete next[id];
+      return next;
+    });
+  }, []);
   const [clipboard, setClipboard] = useState<SceneObject | null>(null);
 
   const commitScene = useCallback((producer: (prev: SceneData) => SceneData) => {
@@ -325,7 +338,9 @@ export function EditorProvider({
     setSculptBrushStrength,
     sculptBrushType,
     setSculptBrushType,
-  }), [addImportedObject, addModelPreset, addPrimitive, aiPanelOpen, alignSelected, clipboard, copyObject, deleteObject, duplicateObject, focusRequest, frameSelected, groundSelected, history.length, historyIndex, pasteObject, redo, scene, sculptBrushSize, sculptBrushStrength, sculptBrushType, sculptMode, saveStatus, selectedId, setScene, transformMode, undo, updateEnvironment, updateObject, updateSceneMeta]);
+    meshes,
+    registerMesh,
+  }), [addImportedObject, addModelPreset, addPrimitive, aiPanelOpen, alignSelected, clipboard, copyObject, deleteObject, duplicateObject, focusRequest, frameSelected, groundSelected, history.length, historyIndex, meshes, pasteObject, redo, registerMesh, scene, sculptBrushSize, sculptBrushStrength, sculptBrushType, sculptMode, saveStatus, selectedId, setScene, transformMode, undo, updateEnvironment, updateObject, updateSceneMeta]);
 
   return <EditorContext.Provider value={value}>{children}</EditorContext.Provider>;
 }

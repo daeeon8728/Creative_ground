@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import * as THREE from 'three';
+import { Evaluator, Brush, SUBTRACTION, ADDITION, INTERSECTION } from 'three-bvh-csg';
 import { useEditor } from '@/lib/editor-context';
 import type { SceneObject, ShadingMode } from '@/lib/scene-types';
 
@@ -72,7 +74,56 @@ export default function Inspector() {
     setSculptBrushStrength,
     sculptBrushType,
     setSculptBrushType,
+    meshes,
   } = useEditor();
+
+  function handleSubdivide() {
+    if (!selectedId) return;
+    const mesh = meshes[selectedId];
+    if (!mesh) return;
+
+    // Simple Loop/Catmull-Clark midpoint subdivision step
+    const src = mesh.geometry;
+    const posAttr = src.attributes.position;
+    const idxAttr = src.index;
+    if (!posAttr || !idxAttr) return;
+
+    const newPositions: number[] = [];
+    const newIndices: number[] = [];
+    const midpointCache = new Map<string, number>();
+
+    function getVertex(i: number) {
+      return [posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)];
+    }
+    function getMidpoint(a: number, b: number): number {
+      const key = a < b ? `${a}_${b}` : `${b}_${a}`;
+      if (midpointCache.has(key)) return midpointCache.get(key)!;
+      const va = getVertex(a), vb = getVertex(b);
+      const idx = newPositions.length / 3;
+      newPositions.push((va[0] + vb[0]) / 2, (va[1] + vb[1]) / 2, (va[2] + vb[2]) / 2);
+      midpointCache.set(key, idx);
+      return idx;
+    }
+
+    // Copy existing vertices
+    for (let i = 0; i < posAttr.count; i++) {
+      newPositions.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+    }
+    // Subdivide each triangle into 4
+    for (let i = 0; i < idxAttr.count; i += 3) {
+      const a = idxAttr.getX(i), b = idxAttr.getX(i + 1), c = idxAttr.getX(i + 2);
+      const ab = getMidpoint(a, b), bc = getMidpoint(b, c), ca = getMidpoint(c, a);
+      newIndices.push(a, ab, ca, b, bc, ab, c, ca, bc, ab, bc, ca);
+    }
+
+    const newGeo = new THREE.BufferGeometry();
+    newGeo.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+    newGeo.setIndex(newIndices);
+    newGeo.computeVertexNormals();
+
+    const json = JSON.stringify(newGeo.toJSON());
+    updateObject(selectedId, { type: 'custom-mesh' as any, importData: json });
+  }
   const obj: SceneObject | undefined = objects.find((o) => o.id === selectedId);
   const textureRef = useRef<HTMLInputElement>(null);
   const [uniformScale, setUniformScale] = useState(true);
@@ -139,6 +190,7 @@ export default function Inspector() {
         <button className="mini-btn" onClick={groundSelected}>Ground</button>
         <button className="mini-btn" onClick={frameSelected}>Frame</button>
         <button className="mini-btn" onClick={() => update({ rotation: [0, 0, 0], scale: [1, 1, 1] })}>Reset</button>
+        <button className="mini-btn" onClick={handleSubdivide} title="Subdivide: double the mesh resolution for more sculpt detail">Subdivide ×4</button>
       </div>
 
       <div className="inspector-divider" />
@@ -197,13 +249,16 @@ export default function Inspector() {
       </select>
 
       <div className="inspector-divider" />
+      <CSGPanel obj={obj} />
+
+      <div className="inspector-divider" />
       <p className="vec3-label">Physics and VFX</p>
       <label className="inspector-field row">
         <span className="inspector-field-label">Physics Body</span>
         <input type="checkbox" checked={obj.isPhysicsBody ?? false} onChange={(e) => update({ isPhysicsBody: e.target.checked })} className="checkbox-input" />
       </label>
       <label className="inspector-field row">
-        <span className="inspector-field-label">Sparkles</span>
+        <span className="inspector-field-label">Sparkles (VFX)</span>
         <input type="checkbox" checked={obj.hasSparkles ?? false} onChange={(e) => update({ hasSparkles: e.target.checked })} className="checkbox-input" />
       </label>
 
@@ -226,5 +281,70 @@ export default function Inspector() {
         </>
       )}
     </div>
+  );
+}
+
+function CSGPanel({ obj }: { obj: SceneObject }) {
+  const { objects, meshes, updateObject, deleteObject } = useEditor();
+  const [targetId, setTargetId] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
+
+  const otherObjects = objects.filter((o) => o.id !== obj.id && !o.locked);
+
+  async function handleCSG(operation: 'union' | 'subtract' | 'intersect') {
+    if (!targetId) { setStatus('Select a target object first.'); return; }
+    const mesh1 = meshes[obj.id];
+    const mesh2 = meshes[targetId];
+    if (!mesh1 || !mesh2) { setStatus('Mesh not found. Select objects in viewport first.'); return; }
+
+    try {
+      setStatus('Computing...');
+      const evaluator = new Evaluator();
+      evaluator.useGroups = false;
+
+      const brush1 = new Brush(mesh1.geometry.clone());
+      brush1.position.copy(mesh1.position);
+      brush1.rotation.copy(mesh1.rotation);
+      brush1.scale.copy(mesh1.scale);
+      brush1.updateMatrixWorld(true);
+
+      const brush2 = new Brush(mesh2.geometry.clone());
+      brush2.position.copy(mesh2.position);
+      brush2.rotation.copy(mesh2.rotation);
+      brush2.scale.copy(mesh2.scale);
+      brush2.updateMatrixWorld(true);
+
+      const op = operation === 'union' ? ADDITION : operation === 'subtract' ? SUBTRACTION : INTERSECTION;
+      const result = evaluator.evaluate(brush1, brush2, op);
+
+      result.geometry.computeVertexNormals();
+
+      // Store the merged geometry JSON as importData on the source object
+      const json = JSON.stringify(result.geometry.toJSON());
+      updateObject(obj.id, { type: 'custom-mesh' as any, importData: json });
+      deleteObject(targetId);
+      setTargetId('');
+      setStatus('Done! Boolean result applied.');
+    } catch (err) {
+      setStatus(`Error: ${String(err)}`);
+    }
+  }
+
+  return (
+    <>
+      <p className="vec3-label">Boolean Operations (CSG)</p>
+      <select className="text-input" value={targetId} onChange={(e) => { setTargetId(e.target.value); setStatus(''); }}>
+        <option value="">Select Target Object...</option>
+        {otherObjects.map((o) => (
+          <option key={o.id} value={o.id}>{o.name}</option>
+        ))}
+      </select>
+      <div className="segmented-row" style={{ marginTop: 8 }}>
+        <button className="segment-btn" onClick={() => handleCSG('union')}>Union</button>
+        <button className="segment-btn" onClick={() => handleCSG('subtract')}>Subtract</button>
+        <button className="segment-btn" onClick={() => handleCSG('intersect')}>Intersect</button>
+      </div>
+      {status && <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6 }}>{status}</p>}
+    </>
   );
 }

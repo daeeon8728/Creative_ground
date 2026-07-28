@@ -90,18 +90,29 @@ function TransformHandle({ object, obj }: { object: THREE.Object3D | null; obj: 
 }
 
 function PrimitiveMesh({ obj }: { obj: SceneObject }) {
-  const { selectedId, selectObject, sculptMode, sculptBrushSize, sculptBrushStrength, sculptBrushType } = useEditor();
+  const { selectedId, selectObject, sculptMode, sculptBrushSize, sculptBrushStrength, sculptBrushType, registerMesh } = useEditor();
   const isSelected = selectedId === obj.id;
   const meshRef = useRef<THREE.Mesh>(null);
   const [meshObject, setMeshObject] = useState<THREE.Mesh | null>(null);
   const brushCursorRef = useRef<THREE.Mesh>(null);
   const isSculptingDown = useRef(false);
   const geometry = useMemo(() => {
-    const geo = getPrimitiveGeometry(obj.type as PrimitiveType).clone();
-    // @ts-ignore
+    let geo: THREE.BufferGeometry;
+    if (obj.type === 'custom-mesh' && obj.importData) {
+      try {
+        const loader = new THREE.BufferGeometryLoader();
+        geo = loader.parse(JSON.parse(obj.importData));
+      } catch {
+        geo = getPrimitiveGeometry('box' as PrimitiveType);
+      }
+    } else {
+      geo = getPrimitiveGeometry(obj.type as PrimitiveType).clone();
+    }
+    // @ts-ignore - boundsTree injected by three-mesh-bvh
     geo.boundsTree = new MeshBVH(geo);
     return geo;
-  }, [obj.type]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [obj.type, obj.importData]);
   const materialProps = useObjectMaterial(obj, isSelected);
 
   useFrame((state) => {
@@ -262,6 +273,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
         ref={(node) => {
           meshRef.current = node;
           setMeshObject(node);
+          registerMesh(obj.id, node);
         }}
         geometry={geometry}
         position={obj.position}
