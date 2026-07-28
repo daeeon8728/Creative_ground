@@ -7,6 +7,7 @@ import { Physics, RigidBody } from '@react-three/rapier';
 import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast, MeshBVH } from 'three-mesh-bvh';
 import * as THREE from 'three';
 import { useEditor } from '@/lib/editor-context';
 import type { SceneObject, PrimitiveType } from '@/lib/scene-types';
@@ -95,7 +96,12 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
   const [meshObject, setMeshObject] = useState<THREE.Mesh | null>(null);
   const brushCursorRef = useRef<THREE.Mesh>(null);
   const isSculptingDown = useRef(false);
-  const geometry = useMemo(() => getPrimitiveGeometry(obj.type as PrimitiveType).clone(), [obj.type]);
+  const geometry = useMemo(() => {
+    const geo = getPrimitiveGeometry(obj.type as PrimitiveType).clone();
+    // @ts-ignore
+    geo.boundsTree = new MeshBVH(geo);
+    return geo;
+  }, [obj.type]);
   const materialProps = useObjectMaterial(obj, isSelected);
 
   useFrame((state) => {
@@ -154,10 +160,37 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     const worldN = new THREE.Vector3();
     let modified = false;
 
+    const inverseMatrix = new THREE.Matrix4().copy(meshRef.current.matrixWorld).invert();
+    const localCenter = hit.point.clone().applyMatrix4(inverseMatrix);
+    const localRadius = sculptBrushSize / Math.max(meshRef.current.scale.x, 0.001);
+    const localSphere = new THREE.Sphere(localCenter, localRadius);
+    const indicesToMove = new Set<number>();
+
+    // @ts-ignore - boundsTree is injected by three-mesh-bvh
+    if (geometry.boundsTree) {
+      // @ts-ignore
+      geometry.boundsTree.shapecast({
+        intersectsBounds: (box: THREE.Box3) => localSphere.intersectsBox(box),
+        intersectsTriangle: (tri: any, triangleIndex: number) => {
+          const idx = geometry.index;
+          const i0 = idx ? idx.getX(triangleIndex * 3) : triangleIndex * 3;
+          const i1 = idx ? idx.getX(triangleIndex * 3 + 1) : triangleIndex * 3 + 1;
+          const i2 = idx ? idx.getX(triangleIndex * 3 + 2) : triangleIndex * 3 + 2;
+          
+          if (localSphere.containsPoint(tri.a)) indicesToMove.add(i0);
+          if (localSphere.containsPoint(tri.b)) indicesToMove.add(i1);
+          if (localSphere.containsPoint(tri.c)) indicesToMove.add(i2);
+          return false;
+        },
+      });
+    } else {
+      for (let i = 0; i < positions.count; i++) indicesToMove.add(i);
+    }
+
     let avgPosition = new THREE.Vector3();
     let count = 0;
     if (sculptBrushType === 'smooth') {
-      for (let i = 0; i < positions.count; i += 1) {
+      for (const i of indicesToMove) {
         v.fromBufferAttribute(positions, i);
         worldV.copy(v).applyMatrix4(meshRef.current.matrixWorld);
         if (worldV.distanceTo(hit.point) < sculptBrushSize) {
@@ -168,7 +201,7 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
       if (count > 0) avgPosition.divideScalar(count);
     }
 
-    for (let i = 0; i < positions.count; i += 1) {
+    for (const i of indicesToMove) {
       v.fromBufferAttribute(positions, i);
       worldV.copy(v).applyMatrix4(meshRef.current.matrixWorld);
       const dist = worldV.distanceTo(hit.point);
@@ -208,12 +241,13 @@ function PrimitiveMesh({ obj }: { obj: SceneObject }) {
     }
 
     if (modified) {
-      // Sculpting intentionally edits the live BufferGeometry used by Three.js.
       // eslint-disable-next-line react-hooks/immutability
       positions.needsUpdate = true;
       geometry.computeVertexNormals();
       geometry.computeBoundingSphere();
       geometry.computeBoundingBox();
+      // @ts-ignore
+      if (geometry.boundsTree) geometry.boundsTree.refit();
     }
   };
 
