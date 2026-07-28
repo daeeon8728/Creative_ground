@@ -128,7 +128,27 @@ export default function Sidebar() {
             </>
           )}
 
-          <p className="env-sub-label">Lighting</p>
+          <p className="env-sub-label">Lighting & HDRI</p>
+          <label className="inspector-field row">
+            <span className="inspector-field-label">HDRI Light</span>
+            <input type="checkbox" className="checkbox-input" checked={environment.hdriEnabled ?? false} onChange={(e) => updateEnvironment({ hdriEnabled: e.target.checked })} />
+          </label>
+          {environment.hdriEnabled && (
+            <label className="inspector-field">
+              <span className="inspector-field-label">HDRI Preset</span>
+              <select className="number-input" value={environment.hdriPreset ?? 'city'} onChange={(e) => updateEnvironment({ hdriPreset: e.target.value })}>
+                <option value="city">City</option>
+                <option value="sunset">Sunset</option>
+                <option value="dawn">Dawn</option>
+                <option value="night">Night</option>
+                <option value="warehouse">Warehouse</option>
+                <option value="forest">Forest</option>
+                <option value="apartment">Apartment</option>
+                <option value="studio">Studio</option>
+                <option value="lobby">Lobby</option>
+              </select>
+            </label>
+          )}
           <label className="inspector-field row">
             <span className="inspector-field-label">Spotlight</span>
             <input type="checkbox" className="checkbox-input" checked={environment.spotLightEnabled ?? false} onChange={(e) => updateEnvironment({ spotLightEnabled: e.target.checked })} />
@@ -149,6 +169,10 @@ export default function Sidebar() {
           </label>
           {environment.postProcessingEnabled && (
             <>
+              <label className="inspector-field row">
+                <span className="inspector-field-label">SSAO (Shadows)</span>
+                <input type="checkbox" className="checkbox-input" checked={environment.ssaoEnabled ?? true} onChange={(e) => updateEnvironment({ ssaoEnabled: e.target.checked })} />
+              </label>
               <label className="inspector-field row">
                 <span className="inspector-field-label">Bloom</span>
                 <input type="checkbox" className="checkbox-input" checked={environment.bloomEnabled ?? false} onChange={(e) => updateEnvironment({ bloomEnabled: e.target.checked })} />

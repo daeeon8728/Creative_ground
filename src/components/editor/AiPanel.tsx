@@ -99,7 +99,7 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
             className={`ai-model-btn ${selectedModel === id ? 'active' : ''}`}
             onClick={() => setSelectedModel(id)}
           >
-            {m.provider === 'google' ? '🔵' : '🟢'} {m.label}
+            NVIDIA {m.label}
           </button>
         ))}
       </div>
@@ -135,7 +135,7 @@ export default function AiPanel({ onClose }: { onClose: () => void }) {
               Generating…
             </span>
           ) : (
-            `✨ Generate with ${AI_MODELS[selectedModel].label}`
+            `Generate with ${AI_MODELS[selectedModel].label}`
           )}
         </button>
       </form>

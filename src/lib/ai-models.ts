@@ -1,27 +1,24 @@
-export type AiModelId = 'nemotron-super' | 'gemini-flash' | 'gemini-flash-8b';
+export type AiModelId =
+  | 'nemotron-ultra'
+  | 'nemotron-super';
 
-export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKeyEnv: string; provider: 'nvidia' | 'google' }> = {
+export const AI_MODELS: Record<AiModelId, { label: string; model: string; apiKeyEnv: string; provider: 'nvidia' }> = {
+  'nemotron-ultra': {
+    label: 'Nemotron Ultra 550B',
+    model: 'nvidia/nemotron-3-ultra-550b-a55b',
+    apiKeyEnv: 'NVIDIA_API_KEY',
+    provider: 'nvidia',
+  },
   'nemotron-super': {
     label: 'Nemotron 120B',
     model: 'nvidia/nemotron-3-super-120b-a12b',
     apiKeyEnv: 'NVIDIA_API_KEY',
     provider: 'nvidia',
   },
-  'gemini-flash': {
-    label: 'Gemini 1.5 Flash',
-    model: 'gemini-1.5-flash-latest',
-    apiKeyEnv: 'GEMINI_API_KEY',
-    provider: 'google',
-  },
-  'gemini-flash-8b': {
-    label: 'Gemini 1.5 Flash-8B',
-    model: 'gemini-1.5-flash-8b-latest',
-    apiKeyEnv: 'GEMINI_API_KEY',
-    provider: 'google',
-  },
 };
 
-export const DEFAULT_AI_MODEL: AiModelId = 'gemini-flash';
+export const DEFAULT_AI_MODEL: AiModelId = 'nemotron-ultra';
+export const FALLBACK_AI_MODELS: AiModelId[] = ['nemotron-super'];
 
 export function isAiModelId(value: unknown): value is AiModelId {
   return typeof value === 'string' && value in AI_MODELS;

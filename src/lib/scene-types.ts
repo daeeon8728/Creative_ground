@@ -45,6 +45,9 @@ export interface SceneEnvironment {
   ambientLightIntensity: number;
   directionalLightIntensity: number;
   spotLightEnabled: boolean;
+  hdriEnabled?: boolean;
+  hdriPreset?: string;
+  ssaoEnabled?: boolean;
   snapEnabled?: boolean;
   snapSize?: number;
 }
@@ -66,6 +69,9 @@ export const DEFAULT_ENVIRONMENT: SceneEnvironment = {
   ambientLightIntensity: 0.5,
   directionalLightIntensity: 1.2,
   spotLightEnabled: false,
+  hdriEnabled: true,
+  hdriPreset: 'city',
+  ssaoEnabled: true,
   snapEnabled: false,
   snapSize: 0.5,
 };

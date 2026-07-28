@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, TransformControls, GizmoHelper, GizmoViewport, Sparkles } from '@react-three/drei';
+import { OrbitControls, Grid, TransformControls, GizmoHelper, GizmoViewport, Sparkles, Environment } from '@react-three/drei';
 import { Physics, RigidBody } from '@react-three/rapier';
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Bloom, Vignette, N8AO } from '@react-three/postprocessing';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import * as THREE from 'three';
@@ -285,6 +285,7 @@ function SceneEnvironmentLayer() {
 
   return (
     <>
+      {environment.hdriEnabled && <Environment preset={(environment.hdriPreset as any) ?? 'city'} background={false} />}
       <color attach="background" args={[environment.background]} />
       {environment.fogEnabled && <fog attach="fog" args={[environment.fogColor, environment.fogNear, environment.fogFar]} />}
       <mesh visible={false} onClick={() => selectObject(null)}>
@@ -323,6 +324,7 @@ function PostProcessingLayer() {
 
   return (
     <EffectComposer enableNormalPass={false}>
+      {environment.ssaoEnabled ? <N8AO aoRadius={1.5} intensity={2} color="black" /> : <></>}
       {environment.bloomEnabled ? <Bloom luminanceThreshold={0.4} mipmapBlur intensity={1.25} /> : <></>}
       {environment.vignetteEnabled ? <Vignette eskil={false} offset={0.1} darkness={1.1} /> : <></>}
     </EffectComposer>
@@ -374,8 +376,8 @@ function SceneContent() {
     <>
       <SceneEnvironmentLayer />
       <ambientLight intensity={environment.ambientLightIntensity ?? 0.5} />
-      <directionalLight position={[5, 8, 5]} intensity={environment.directionalLightIntensity ?? 1.2} castShadow shadow-mapSize={[2048, 2048]} />
-      {environment.spotLightEnabled && <spotLight position={[0, 10, 0]} intensity={2} angle={0.3} penumbra={1} castShadow />}
+      <directionalLight position={[5, 8, 5]} intensity={environment.directionalLightIntensity ?? 1.2} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} />
+      {environment.spotLightEnabled && <spotLight position={[0, 10, 0]} intensity={2} angle={0.3} penumbra={1} castShadow shadow-bias={-0.0001} />}
       <directionalLight position={[-5, 3, -5]} intensity={0.3} />
       {environment.physicsEnabled ? (
         <Physics>

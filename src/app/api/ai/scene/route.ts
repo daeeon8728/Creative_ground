@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callNemotron, parseAiJson } from '@/lib/ai';
-import { isAiModelId } from '@/lib/ai-models';
+import { DEFAULT_AI_MODEL, FALLBACK_AI_MODELS, isAiModelId, type AiModelId } from '@/lib/ai-models';
 import type { AiSceneResponse } from '@/lib/scene-types';
 
 const SYSTEM_PROMPT = `You are an expert 3D scene design architect. When given a description, respond ONLY with a valid JSON object.
@@ -36,37 +36,37 @@ export async function POST(req: NextRequest) {
     const { prompt, existingObjects, modelId } = await req.json();
     if (!prompt?.trim()) return NextResponse.json({ error: 'prompt required' }, { status: 400 });
 
-    const chosenModelId = isAiModelId(modelId) ? modelId : undefined;
+    const chosenModelId = isAiModelId(modelId) ? modelId : DEFAULT_AI_MODEL;
 
     const userMessage = existingObjects?.length
       ? `Current scene has ${existingObjects.length} objects: ${JSON.stringify(existingObjects.slice(0, 10))}\n\nUser request: ${prompt}`
       : prompt;
 
-    let raw: string;
-    try {
-      raw = await callNemotron(userMessage, {
-        systemPrompt: SYSTEM_PROMPT,
-        temperature: 0.7,
-        maxTokens: 8192,
-        jsonMode: true,
-        modelId: chosenModelId,
-      });
-    } catch (primaryErr) {
-      const msg = (primaryErr as Error).message ?? '';
-      // If Gemini quota exceeded, fallback to Nemotron
-      if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Quota exceeded')) {
-        console.warn('[AI Scene] Gemini quota exceeded, falling back to Nemotron');
+    const modelAttempts: AiModelId[] = [
+      chosenModelId,
+      ...FALLBACK_AI_MODELS.filter((id) => id !== chosenModelId),
+    ];
+    let raw = '';
+    let lastError: unknown = null;
+
+    for (const attemptModelId of modelAttempts) {
+      try {
         raw = await callNemotron(userMessage, {
           systemPrompt: SYSTEM_PROMPT,
           temperature: 0.7,
           maxTokens: 8192,
           jsonMode: true,
-          modelId: 'nemotron-super',
+          modelId: attemptModelId,
         });
-      } else {
-        throw primaryErr;
+        lastError = null;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[AI Scene] ${attemptModelId} failed, trying fallback if available`, err);
       }
     }
+
+    if (lastError) throw lastError;
 
     const parsed = parseAiJson<AiSceneResponse>(raw);
     return NextResponse.json(parsed);
