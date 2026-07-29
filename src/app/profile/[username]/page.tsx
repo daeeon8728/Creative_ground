@@ -47,46 +47,48 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
       </header>
 
       <main className="gallery-main" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-        <div className="profile-header">
-          <div className="profile-info">
+        <div className="profile-hero">
+          {/* Avatar circle */}
+          <div className="profile-avatar">
+            {user.username.slice(0, 1).toUpperCase()}
+          </div>
+
+          {/* Info block */}
+          <div className="profile-info-block">
             <h1 className="profile-username">@{user.username}</h1>
             <p className="profile-name">{user.name}</p>
+
+            {/* Stats row */}
             <div className="profile-stats">
-              <div className="stat-box">
-                <span className="stat-value">{posts.length}</span>
-                <span className="stat-label">Scenes</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-value">{followers}</span>
-                <span className="stat-label">Followers</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-value">{following}</span>
-                <span className="stat-label">Following</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-value">{totalLikes}</span>
-                <span className="stat-label">Likes</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-value">{totalViews}</span>
-                <span className="stat-label">Views</span>
-              </div>
+              {[
+                { value: posts.length, label: 'Scenes' },
+                { value: followers, label: 'Followers' },
+                { value: following, label: 'Following' },
+                { value: totalLikes, label: 'Likes' },
+                { value: totalViews, label: 'Views' },
+              ].map(({ value, label }) => (
+                <div className="stat-box" key={label}>
+                  <span className="stat-value">{value}</span>
+                  <span className="stat-label">{label}</span>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="profile-actions">
-            {isSelf ? (
-              <Link href="/projects" className="toolbar-btn accent large">
-                ✏️ My Projects
-              </Link>
-            ) : (
-              <>
-                <FollowButton targetUsername={user.username} />
-                <Link href={`/chat/${user.username}`} className="toolbar-btn large">
-                  💬 Message
+
+            {/* Action buttons — always visible */}
+            <div className="profile-actions">
+              {isSelf ? (
+                <Link href="/projects" className="toolbar-btn accent large">
+                  ✏️ My Projects
                 </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <FollowButton targetUsername={user.username} />
+                  <Link href={`/chat/${user.username}`} className="toolbar-btn large">
+                    💬 Message
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
