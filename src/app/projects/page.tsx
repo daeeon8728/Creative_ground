@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { nanoid } from 'nanoid';
 import { getAllScenes, deleteScene, saveScene, createEmptyScene } from '@/lib/scene-db';
 import type { SceneData } from '@/lib/scene-types';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/ui/NotificationBell';
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString('ko-KR', {
@@ -16,6 +18,7 @@ function formatDate(ts: number) {
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [scenes, setScenes] = useState<SceneData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,9 +52,14 @@ export default function ProjectsPage() {
         </div>
         <div className="projects-header-actions">
           <Link href="/gallery" className="toolbar-btn">🌐 Gallery</Link>
+          {session?.user?.username && (
+            <Link href={`/profile/${session.user.username}`} className="toolbar-btn">My Profile</Link>
+          )}
           <button className="toolbar-btn accent" onClick={handleNew}>
             + New Scene
           </button>
+          <NotificationBell />
+          <ThemeToggle />
           <button className="toolbar-btn" onClick={() => signOut({ callbackUrl: '/' })}>
             Logout
           </button>

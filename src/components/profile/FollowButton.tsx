@@ -12,13 +12,7 @@ export default function FollowButton({ targetUsername }: Props) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const isSelf = session?.user?.username === targetUsername;
-
   useEffect(() => {
-    if (!session) {
-      setLoading(false);
-      return;
-    }
     fetch(`/api/profile/${targetUsername}/follow`)
       .then((res) => res.json())
       .then((data) => {
@@ -26,7 +20,7 @@ export default function FollowButton({ targetUsername }: Props) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [session, targetUsername]);
+  }, [targetUsername]);
 
   async function handleToggle() {
     if (!session) {
@@ -46,8 +40,6 @@ export default function FollowButton({ targetUsername }: Props) {
       setLoading(false);
     }
   }
-
-  if (isSelf) return null; // Don't show follow button on own profile
 
   return (
     <button
